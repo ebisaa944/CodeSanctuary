@@ -1,0 +1,102 @@
+{% extends 'therapy/base.html' %}
+
+{% block title %}Get Recommendations{% endblock %}
+{% block page_title %}Personalized Strategy Recommendations{% endblock %}
+{% block page_subtitle %}Get coping strategies tailored to your current emotional state{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-magic"></i> Tell us how you're feeling</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Current Primary Emotion</strong></label>
+                        <select name="emotion" class="form-select emotion-select" required>
+                            <option value="">Select an emotion...</option>
+                            {% for value, label in emotion_options %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Choose the emotion that feels strongest right now</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Intensity: <span id="intensityValue">5</span>/10</strong></label>
+                        <input type="range" name="intensity" class="form-range" 
+                               min="1" max="10" value="5" id="intensitySlider" required>
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>Barely there</span>
+                            <span>Overwhelming</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Time Available</strong></label>
+                        <div class="input-group">
+                            <input type="number" name="time_available" class="form-control" 
+                                   value="5" min="1" max="60" required>
+                            <span class="input-group-text">minutes</span>
+                        </div>
+                        <small class="text-muted">How much time do you have for a coping strategy?</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="prefer_coding" id="prefer_coding">
+                            <label class="form-check-label" for="prefer_coding">
+                                <i class="fas fa-code"></i> Include coding-integrated strategies
+                            </label>
+                        </div>
+                        <small class="text-muted">Get strategies that incorporate programming activities</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-magic"></i> Get Recommendations
+                        </button>
+                        <a href="{% url 'therapy:strategies_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list"></i> Browse All Strategies
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- How It Works -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6><i class="fas fa-info-circle"></i> How Recommendations Work</h6>
+                <ul class="small text-muted mb-0">
+                    <li>We match strategies to your specific emotional state</li>
+                    <li>Strategies are filtered by your available time</li>
+                    <li>Difficulty is adjusted based on intensity level</li>
+                    <li>Strategies shown have helped others in similar states</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Update intensity display
+    $('#intensitySlider').on('input', function() {
+        $('#intensityValue').text($(this).val());
+    });
+    
+    // Form submission
+    $('form').on('submit', function() {
+        $('button[type="submit"]').prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin"></i> Finding strategies...');
+    });
+});
+</script>
+{% endblock %}

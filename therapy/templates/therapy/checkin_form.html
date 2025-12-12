@@ -1,0 +1,157 @@
+{% extends 'therapy/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}New Emotional Check-in{% endblock %}
+{% block page_title %}How are you feeling?{% endblock %}
+{% block page_subtitle %}Take a moment to notice and record your emotional state{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-heartbeat"></i> Emotional Check-in Form</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="checkinForm">
+                    {% csrf_token %}
+                    
+                    <!-- Primary Emotion -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Primary Feeling</strong></label>
+                        <div class="emotion-guidance alert alert-info mt-2" style="display: none;"></div>
+                        {{ form.primary_emotion|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Intensity -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Intensity (1-10)</strong></label>
+                        <p class="text-muted small">How strong is this feeling? (1=barely there, 10=overwhelming)</p>
+                        {{ form.intensity|as_crispy_field }}
+                        <div class="mt-2">
+                            <small class="text-muted">Current: <span id="intensityValue">5</span>/10</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Physical Symptoms -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Physical Symptoms</strong></label>
+                        <p class="text-muted small">Notice any physical sensations in your body</p>
+                        <div class="row">
+                            {% for value, label in physical_symptoms %}
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="physical_symptoms" 
+                                           value="{{ value }}" id="symptom_{{ forloop.counter }}">
+                                    <label class="form-check-label" for="symptom_{{ forloop.counter }}">
+                                        {{ label }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Trigger Description -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>What happened before you felt this way?</strong></label>
+                        <p class="text-muted small">Optional: Describe any triggers or context</p>
+                        {{ form.trigger_description|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Additional Thoughts & Feelings</strong></label>
+                        <p class="text-muted small">Any other reflections or insights?</p>
+                        {{ form.notes|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Key Insight -->
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Key Insight</strong></label>
+                        <p class="text-muted small">Any small realization about this experience?</p>
+                        {{ form.key_insight|as_crispy_field }}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'therapy:dashboard' %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Check-in
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Tips -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6><i class="fas fa-lightbulb"></i> Quick Tips</h6>
+                <ul class="small text-muted mb-0">
+                    <li>There's no right or wrong way to feel - all emotions are valid</li>
+                    <li>Try to describe your experience without judgment</li>
+                    <li>Notice where in your body you feel this emotion</li>
+                    <li>Remember: this is just one moment in time</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Update intensity display
+    $('#id_intensity').on('input', function() {
+        const value = $(this).val();
+        $('#intensityValue').text(value);
+        
+        // Color code
+        if (value <= 3) {
+            $('#intensityValue').css('color', '#4CAF50');
+        } else if (value <= 6) {
+            $('#intensityValue').css('color', '#FFC107');
+        } else {
+            $('#intensityValue').css('color', '#F44336');
+        }
+    });
+    
+    // Initialize intensity value
+    $('#intensityValue').text($('#id_intensity').val());
+    
+    // Emotion guidance
+    $('#id_primary_emotion').on('change', function() {
+        const emotion = $(this).val();
+        const guidance = $('.emotion-guidance');
+        
+        const guidanceText = {
+            'anxious': 'Try a grounding exercise or deep breathing. Notice where you feel the anxiety in your body.',
+            'overwhelmed': 'Break tasks into smaller steps. You only need to do one thing at a time.',
+            'doubtful': 'Remember past successes. You\'ve overcome challenges before.',
+            'fatigued': 'Rest is productive too. What does your body need right now?',
+            'calm': 'Use this calm energy for focused work or creative expression.',
+            'focused': 'Channel this concentration into meaningful work.',
+            'hopeful': 'What possibilities does this hope point toward?',
+            'frustrated': 'Take a short break. Sometimes stepping away helps gain perspective.',
+            'excited': 'Channel this energy into a project or learning opportunity.',
+            'neutral': 'Notice the absence of strong emotion. That\'s valuable information too.'
+        };
+        
+        if (guidanceText[emotion]) {
+            guidance.html('<i class="fas fa-lightbulb"></i> ' + guidanceText[emotion]).show();
+        } else {
+            guidance.hide();
+        }
+    });
+    
+    // Form submission
+    $('#checkinForm').on('submit', function() {
+        // Disable submit button to prevent double submission
+        $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+    });
+});
+</script>
+{% endblock %}

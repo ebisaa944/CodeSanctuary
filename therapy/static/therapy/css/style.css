@@ -1,0 +1,267 @@
+/* Therapeutic CSS - Gentle, calming design */
+
+:root {
+    --primary-color: #5c6bc0;
+    --secondary-color: #42a5f5;
+    --success-color: #66bb6a;
+    --danger-color: #ef5350;
+    --warning-color: #ffca28;
+    --gentle-color: #f8bbd9;
+    --calm-color: #c8e6c9;
+    --focus-color: #bbdefb;
+    --neutral-color: #f5f5f5;
+}
+
+body.therapy-app {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+}
+
+/* Navigation */
+.therapy-nav {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--primary-color);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    color: var(--primary-color) !important;
+}
+
+/* Cards */
+.emotion-card {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.emotion-card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+/* Buttons */
+.btn-gentle {
+    background: var(--gentle-color);
+    border-color: var(--gentle-color);
+    color: #333;
+}
+
+.btn-calm {
+    background: var(--calm-color);
+    border-color: var(--calm-color);
+    color: #333;
+}
+
+.btn-focus {
+    background: var(--focus-color);
+    border-color: var(--focus-color);
+    color: #333;
+}
+
+/* Forms */
+.gentle-select {
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    padding: 10px;
+    transition: border-color 0.3s;
+}
+
+.gentle-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(92, 107, 192, 0.25);
+}
+
+.gentle-textarea {
+    border-radius: 8px;
+    border: 2px solid #e0e0e0;
+    resize: vertical;
+    transition: border-color 0.3s;
+}
+
+.gentle-textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(92, 107, 192, 0.25);
+}
+
+/* Intensity Slider */
+.intensity-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #4CAF50, #FFC107, #F44336);
+    outline: none;
+}
+
+.intensity-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #333;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Emotion Radio Buttons */
+.emotion-radio {
+    display: none;
+}
+
+.emotion-radio + label {
+    display: inline-block;
+    padding: 15px 20px;
+    margin: 5px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+    min-width: 100px;
+    font-size: 1.2em;
+}
+
+.emotion-radio:checked + label {
+    border-color: var(--primary-color);
+    background: var(--focus-color);
+    transform: scale(1.05);
+}
+
+/* Checkboxes */
+.symptom-checkboxes {
+    list-style: none;
+    padding: 0;
+}
+
+.symptom-checkboxes li {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: background 0.3s;
+}
+
+.symptom-checkboxes li:hover {
+    background: #e9ecef;
+}
+
+/* Alerts and Messages */
+.alert-gentle {
+    background: var(--gentle-color);
+    border-color: #f8bbd9;
+    color: #333;
+}
+
+.alert-calm {
+    background: var(--calm-color);
+    border-color: #c8e6c9;
+    color: #333;
+}
+
+/* Footer */
+.therapy-footer {
+    background: rgba(255, 255, 255, 0.9);
+    border-top: 2px solid var(--neutral-color);
+    padding: 20px 0;
+    margin-top: 40px;
+}
+
+.emergency-resources {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+/* Gentle Mode */
+.gentle-mode-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(90deg, #f8bbd9, #e1bee7);
+    color: #333;
+    text-align: center;
+    padding: 8px;
+    z-index: 1050;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Progress and Meters */
+.progress {
+    height: 20px;
+    border-radius: 10px;
+    background: #e9ecef;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--danger-color));
+}
+
+/* Tables */
+.table-hover tbody tr:hover {
+    background: rgba(92, 107, 192, 0.05);
+}
+
+/* Animations */
+@keyframes gentlePulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+.gentle-pulse {
+    animation: gentlePulse 2s infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .emotion-radio + label {
+        min-width: 80px;
+        padding: 10px 15px;
+        font-size: 1em;
+    }
+    
+    .card {
+        margin-bottom: 15px;
+    }
+}
+
+/* Reflection Box */
+.reflection-box {
+    background: linear-gradient(135deg, #fffde7, #f3e5f5);
+    border-left: 4px solid #9c27b0;
+    padding: 15px;
+    border-radius: 0 8px 8px 0;
+}
+
+/* Quick Checkin */
+.quick-intensity {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: linear-gradient(to right, #4CAF50, #FFC107, #F44336);
+    border-radius: 4px;
+    outline: none;
+}
+
+/* Floating Reminder */
+.floating-reminder {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    max-width: 300px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    border-radius: 10px;
+}

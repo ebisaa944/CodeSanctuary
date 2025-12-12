@@ -1,0 +1,107 @@
+<div class="quick-checkin-form">
+    <form id="quickCheckinForm" method="post" action="{% url 'therapy:quick_checkin' %}">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label class="form-label"><strong>How are you feeling right now?</strong></label>
+            <div class="emotion-buttons text-center">
+                {% for value, label in form.emotion.field.choices %}
+                <input type="radio" name="emotion" value="{{ value }}" id="emotion_{{ value }}" 
+                       class="btn-check" {% if forloop.first %}checked{% endif %}>
+                <label for="emotion_{{ value }}" class="btn btn-outline-primary m-1" style="font-size: 1.5em;">
+                    {{ value }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label"><strong>Intensity: <span id="quickIntensityValue">3</span>/5</strong></label>
+            <input type="range" name="intensity" class="form-range quick-intensity" 
+                   min="1" max="5" value="3" id="quickIntensity">
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label"><strong>Quick note (optional)</strong></label>
+            <input type="text" name="note" class="form-control" placeholder="Brief note about this moment...">
+        </div>
+        
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save Quick Check-in
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Update intensity display
+    $('#quickIntensity').on('input', function() {
+        $('#quickIntensityValue').text($(this).val());
+    });
+    
+    // Form submission
+    $('#quickCheckinForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const form = $(this);
+        const submitBtn = form.find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        
+        // Show loading
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+        
+        $.ajax({
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Close modal
+                    $('#quickCheckinModal').modal('hide');
+                    
+                    // Show success message
+                    showNotification('Quick check-in saved!', 'success');
+                    
+                    // Reload page after a moment
+                    setTimeout(() => location.reload(), 1000);
+                }
+            },
+            error: function(xhr) {
+                showNotification('Error saving check-in. Please try again.', 'danger');
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+});
+
+function showNotification(message, type) {
+    // Create and show notification
+    const notification = $(
+        '<div class="alert alert-' + type + ' alert-dismissible fade show floating-notification">' +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+        message +
+        '</div>'
+    );
+    
+    $('body').append(notification);
+    
+    // Position
+    notification.css({
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 9999,
+        maxWidth: '300px'
+    });
+    
+    // Auto-remove
+    setTimeout(() => {
+        notification.alert('close');
+    }, 3000);
+}
+</script>

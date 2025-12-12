@@ -1,0 +1,207 @@
+{% extends 'therapy/base.html' %}
+
+{% block title %}Emotional Check-ins{% endblock %}
+{% block page_title %}Your Emotional Journey{% endblock %}
+{% block page_subtitle %}Track and reflect on your emotional patterns{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-filter"></i> Filter Check-ins</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="emotion" class="form-label">Emotion</label>
+                        <select name="emotion" id="emotion" class="form-select">
+                            <option value="">All Emotions</option>
+                            {% for value, label in emotion_options %}
+                            <option value="{{ value }}" {% if current_filters.emotion == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">From Date</label>
+                        <input type="date" name="date_from" id="date_from" class="form-control" 
+                               value="{{ current_filters.date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_to" class="form-label">To Date</label>
+                        <input type="date" name="date_to" id="date_to" class="form-control" 
+                               value="{{ current_filters.date_to }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="has_symptoms" class="form-label">Physical Symptoms</label>
+                        <select name="has_symptoms" id="has_symptoms" class="form-select">
+                            <option value="">All</option>
+                            <option value="yes" {% if current_filters.has_symptoms == 'yes' %}selected{% endif %}>
+                                With Symptoms
+                            </option>
+                            <option value="no" {% if current_filters.has_symptoms == 'no' %}selected{% endif %}>
+                                Without Symptoms
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Apply Filters
+                        </button>
+                        <a href="{% url 'therapy:checkin_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </a>
+                        <a href="{% url 'therapy:checkin_create' %}" class="btn btn-success float-end">
+                            <i class="fas fa-plus"></i> New Check-in
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-list"></i> All Check-ins ({{ total_checkins }})</h5>
+                <div>
+                    <a href="{% url 'therapy:export_data' 'json' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-download"></i> Export JSON
+                    </a>
+                    <a href="{% url 'therapy:export_data' 'csv' %}" class="btn btn-outline-secondary btn-sm ms-2">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if page_obj %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Primary Emotion</th>
+                                <th>Intensity</th>
+                                <th>Physical Symptoms</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for checkin in page_obj %}
+                            <tr>
+                                <td>
+                                    <small class="text-muted">{{ checkin.created_at|date:"M d, Y" }}</small><br>
+                                    <small>{{ checkin.created_at|date:"g:i A" }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ checkin.get_primary_emotion_display }}</strong>
+                                    {% if checkin.secondary_emotions %}
+                                    <br><small class="text-muted">
+                                        +{{ checkin.secondary_emotions|length }} more
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar" style="width: {{ checkin.intensity|add:"0" }}0%"></div>
+                                        </div>
+                                        <span class="badge bg-secondary">{{ checkin.intensity }}/10</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if checkin.physical_symptoms %}
+                                    <small>
+                                        {% for symptom in checkin.physical_symptoms %}
+                                        <span class="badge bg-info me-1">{{ symptom }}</span>
+                                        {% endfor %}
+                                    </small>
+                                    {% else %}
+                                    <small class="text-muted">None</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if checkin.notes %}
+                                    <small>{{ checkin.notes|truncatewords:8 }}</small>
+                                    {% else %}
+                                    <small class="text-muted">No notes</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'therapy:checkin_detail' checkin.pk %}" 
+                                       class="btn btn-sm btn-outline-info" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-heartbeat fa-3x text-muted mb-3"></i>
+                    <h4>No check-ins found</h4>
+                    <p class="text-muted mb-4">
+                        {% if request.GET %}
+                        Try changing your filters or
+                        {% endif %}
+                        Start by recording your first emotional check-in
+                    </p>
+                    <a href="{% url 'therapy:checkin_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create First Check-in
+                    </a>
+                    {% if request.GET %}
+                    <a href="{% url 'therapy:checkin_list' %}" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,289 @@
+{% extends 'therapy/base.html' %}
+
+{% block title %}Emotional Insights{% endblock %}
+{% block page_title %}Emotional Patterns & Insights{% endblock %}
+{% block page_subtitle %}Understand your emotional journey over time{% endblock %}
+
+{% block content %}
+{% if no_data %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                <h4>{{ message }}</h4>
+                <p class="text-muted">Start recording check-ins to see patterns and insights.</p>
+                <a href="{% url 'therapy:checkin_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create First Check-in
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row mb-4">
+    <!-- Summary Cards -->
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title">Total Check-ins</h6>
+                <h2 class="display-4">{{ total_checkins }}</h2>
+                <small class="text-muted">Since {{ start_date|date:"M d" }}</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title">Average Intensity</h6>
+                <h2 class="display-4">{{ avg_intensity }}</h2>
+                <small class="text-muted">Out of 10</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title">Most Common Emotion</h6>
+                <h2 class="display-6">{{ common_emotions.0.0|title }}</h2>
+                <small class="text-muted">{{ common_emotions.0.1 }} times</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title">Time Period</h6>
+                <h2 class="display-6">{{ start_date|date:"M d" }} - {{ end_date|date:"M d" }}</h2>
+                <small class="text-muted">Last 30 days</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Common Emotions -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Most Common Emotions</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="emotionsChart" height="200"></canvas>
+                <div class="mt-3">
+                    <ul class="list-group">
+                        {% for emotion, count in common_emotions %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ emotion|title }}
+                            <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Time Patterns -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock"></i> Time of Day Patterns</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="timeChart" height="200"></canvas>
+                <div class="mt-3">
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <small class="text-muted">Morning</small><br>
+                            <strong>{{ time_patterns.morning }}</strong>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted">Afternoon</small><br>
+                            <strong>{{ time_patterns.afternoon }}</strong>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted">Evening</small><br>
+                            <strong>{{ time_patterns.evening }}</strong>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-muted">Night</small><br>
+                            <strong>{{ time_patterns.night }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Common Triggers -->
+    {% if common_triggers %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Common Triggers</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for trigger, count in common_triggers %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ trigger|title }}
+                        <span class="badge bg-info rounded-pill">{{ count }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Weekday Patterns -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-calendar"></i> Weekday Patterns</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="weekdayChart" height="200"></canvas>
+                <div class="mt-3 text-center small text-muted">
+                    Which days of the week do you tend to check in most?
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-download"></i> Export Your Data</h5>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted">Download your emotional check-in data for personal reflection or to share with a therapist.</p>
+                <a href="{% url 'therapy:export_data' 'json' %}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-file-code"></i> Export as JSON
+                </a>
+                <a href="{% url 'therapy:export_data' 'csv' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-csv"></i> Export as CSV
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    {% if not no_data %}
+    // Emotions Chart
+    const emotionsCtx = document.getElementById('emotionsChart').getContext('2d');
+    const emotionsChart = new Chart(emotionsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{% for emotion, count in common_emotions %}'{{ emotion|title }}',{% endfor %}],
+            datasets: [{
+                data: [{% for emotion, count in common_emotions %}{{ count }},{% endfor %}],
+                backgroundColor: [
+                    '#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Time of Day Chart
+    const timeCtx = document.getElementById('timeChart').getContext('2d');
+    const timeChart = new Chart(timeCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Morning', 'Afternoon', 'Evening', 'Night'],
+            datasets: [{
+                label: 'Check-ins',
+                data: [
+                    {{ time_patterns.morning }},
+                    {{ time_patterns.afternoon }},
+                    {{ time_patterns.evening }},
+                    {{ time_patterns.night }}
+                ],
+                backgroundColor: [
+                    'rgba(76, 175, 80, 0.7)',
+                    'rgba(33, 150, 243, 0.7)',
+                    'rgba(255, 152, 0, 0.7)',
+                    'rgba(156, 39, 176, 0.7)'
+                ],
+                borderColor: [
+                    '#4CAF50',
+                    '#2196F3',
+                    '#FF9800',
+                    '#9C27B0'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    
+    // Weekday Chart
+    const weekdayCtx = document.getElementById('weekdayChart').getContext('2d');
+    const weekdayChart = new Chart(weekdayCtx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Check-ins per day',
+                data: [
+                    {{ weekday_patterns.1 }},
+                    {{ weekday_patterns.2 }},
+                    {{ weekday_patterns.3 }},
+                    {{ weekday_patterns.4 }},
+                    {{ weekday_patterns.5 }},
+                    {{ weekday_patterns.6 }},
+                    {{ weekday_patterns.0 }}
+                ],
+                borderColor: '#5c6bc0',
+                backgroundColor: 'rgba(92, 107, 192, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

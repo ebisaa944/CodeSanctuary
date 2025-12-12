@@ -1,0 +1,119 @@
+{% extends 'therapy/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if strategy %}Edit{% else %}Create{% endif %} Coping Strategy{% endblock %}
+{% block page_title %}{% if strategy %}Edit{% else %}Create New{% endif %} Coping Strategy{% endblock %}
+{% block page_subtitle %}{% if strategy %}Update existing strategy{% else %}Add a new therapeutic strategy to the library{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus-circle"></i> Strategy Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-info-circle"></i> Basic Information</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.name|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.strategy_type|as_crispy_field }}
+                            </div>
+                        </div>
+                        {{ form.description|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Target Emotions -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-heart"></i> Target Emotions</h6>
+                        <div class="alert alert-info">
+                            <small>Select which emotions this strategy helps with. Hold Ctrl (Cmd on Mac) to select multiple.</small>
+                        </div>
+                        {{ form.target_emotions|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Implementation Details -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-cogs"></i> Implementation</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.estimated_minutes|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.difficulty_level|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Coding Integration -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-code"></i> Coding Integration</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.coding_integration|as_crispy_field }}
+                            </div>
+                            <div class="col-md-8">
+                                {{ form.coding_language|as_crispy_field }}
+                            </div>
+                        </div>
+                        {{ form.coding_template|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Instructions -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-list-ol"></i> Instructions</h6>
+                        <div class="alert alert-info">
+                            <small>Enter step-by-step instructions. Each line will be a separate step.</small>
+                        </div>
+                        {{ form.instructions|as_crispy_field }}
+                    </div>
+                    
+                    <!-- Tips & Challenges -->
+                    <div class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-lightbulb"></i> Tips for Success</h6>
+                                {{ form.tips_for_success|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Common Challenges</h6>
+                                {{ form.common_challenges|as_crispy_field }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'therapy:strategies_list' %}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> {% if strategy %}Update{% else %}Create{% endif %} Strategy
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Guidelines -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6><i class="fas fa-book"></i> Strategy Creation Guidelines</h6>
+                <ul class="small text-muted mb-0">
+                    <li>Keep descriptions clear and concise</li>
+                    <li>Break instructions into small, manageable steps</li>
+                    <li>Consider different skill levels and emotional states</li>
+                    <li>Include both benefits and potential challenges</li>
+                    <li>Test strategies yourself when possible</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

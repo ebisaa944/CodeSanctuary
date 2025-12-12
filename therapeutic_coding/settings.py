@@ -38,15 +38,19 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Third party apps
     'rest_framework',                    # Django REST Framework
     'django_filters',                    # Django Filters
     'corsheaders',                       # CORS for frontend
-
-
-    'apps.therapy',
-    'apps.users',
-    'apps.learning',
-    'apps.social',
+    'crispy_forms',
+    'crispy_bootstrap5',
+    
+    # Your apps (without apps. prefix since we added apps to path)
+    'users',
+    'therapy',
+    'learning',
+    'social',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +61,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #'users.middleware.TherapeuticMiddleware',
+    #'users.middleware.StressAwareMiddleware',
+    #'users.middleware.GentleResponseMiddleware',
 ]
 
 ROOT_URLCONF = 'therapeutic_coding.urls'
@@ -128,15 +135,42 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # Static files configuration
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+    BASE_DIR / "therapy/static",
+    BASE_DIR / "users/static",
+    BASE_DIR / "learning/static",   
+    BASE_DIR / "social/static",
+    BASE_DIR / "chat/static",
+
+]
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# REST Framework settings
+
+STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
+# Crispy Forms
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+# Custom user model
+#AUTH_USER_MODEL = 'users.User'
+
+# Login/Logout URLs
+LOGIN_URL = 'users:login'
+LOGIN_REDIRECT_URL = 'therapy:dashboard'
+LOGOUT_REDIRECT_URL = 'home'
 
 
 # Add REST Framework configuration
@@ -171,3 +205,9 @@ LOGOUT_REDIRECT_URL = '/'
 
 # Email backend (for password reset)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Add authentication backends
+AUTHENTICATION_BACKENDS = [
+    'users.authentication.TherapeuticAuthenticationBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Keep default
+]

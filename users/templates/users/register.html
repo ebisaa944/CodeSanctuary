@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - Code Sanctuary{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="therapeutic-card">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                    <h2>Join Code Sanctuary</h2>
+                    <p class="text-muted">Start your therapeutic coding journey</p>
+                </div>
+                
+                <form method="post" novalidate class="therapeutic-form">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-control" required>
+                            <small class="form-text text-muted">Choose a name that feels comfortable</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" required>
+                            <small class="form-text text-muted">We'll never share your email</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password1" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" name="password2" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">How are you feeling about learning?</label>
+                        <select name="emotional_profile" class="form-select">
+                            <option value="balanced">Fairly balanced</option>
+                            <option value="anxious">Some anxiety</option>
+                            <option value="avoidant">Tend to avoid challenges</option>
+                            <option value="doubtful">Self-doubt</option>
+                            <option value="overwhelmed">Easily overwhelmed</option>
+                            <option value="resilient">Building resilience</option>
+                        </select>
+                        <small class="form-text text-muted">This helps us personalize your experience</small>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="gentle_mode" id="gentleMode" checked>
+                            <label class="form-check-label" for="gentleMode">
+                                Start in Gentle Mode
+                            </label>
+                            <small class="form-text text-muted d-block">
+                                Extra support and slower pacing
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Daily Time Limit (minutes)</label>
+                        <input type="range" name="daily_time_limit" class="form-range" min="5" max="180" value="30" oninput="this.nextElementSibling.value = this.value + ' minutes'">
+                        <output>30 minutes</output>
+                        <small class="form-text text-muted">5-180 minutes per day</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-heart me-2"></i>Begin Healing Journey
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-4">
+                    <p class="mb-0">Already have an account?</p>
+                    <a href="{% url 'users:login' %}" class="btn btn-outline-primary">
+                        Sign In Instead
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

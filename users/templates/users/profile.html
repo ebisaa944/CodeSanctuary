@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Your Profile - Code Sanctuary{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Profile Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="therapeutic-card p-4">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-circle me-4" style="background-color: {{ user.avatar_color }};">
+                        {{ user.username|first|upper }}
+                    </div>
+                    <div>
+                        <h1 class="mb-1">{{ user.username }}</h1>
+                        <span class="badge emotional-badge emotional-{{ user.emotional_profile }}">
+                            {{ user.get_emotional_profile_display }}
+                        </span>
+                        <div class="mt-2">
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-fire me-1"></i>{{ user.consecutive_days }} day streak
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Left Column - Stats & Quick Actions -->
+        <div class="col-md-4 mb-4">
+            <div class="therapeutic-card h-100">
+                <h4 class="mb-3"><i class="fas fa-chart-line me-2"></i>Your Progress</h4>
+                
+                <div class="stats-grid mb-4">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ user.total_learning_minutes }}</div>
+                        <div class="stat-label">Total Minutes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ user.current_stress_level }}/10</div>
+                        <div class="stat-label">Stress Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ user.daily_time_limit }}</div>
+                        <div class="stat-label">Daily Limit</div>
+                    </div>
+                </div>
+                
+                {% if user.custom_affirmation %}
+                <div class="affirmation-box p-3 mb-4 rounded">
+                    <i class="fas fa-quote-left me-2"></i>
+                    {{ user.custom_affirmation }}
+                    <i class="fas fa-quote-right ms-2"></i>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'users:settings' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-cog me-2"></i>Edit Settings
+                    </a>
+                    <a href="{% url 'therapy:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-heart me-2"></i>Continue Therapy
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Middle Column - Therapeutic Info -->
+        <div class="col-md-5 mb-4">
+            <div class="therapeutic-card h-100">
+                <h4 class="mb-3"><i class="fas fa-brain me-2"></i>Therapeutic State</h4>
+                
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Current Stress</span>
+                        <span class="stress-level stress-{{ user.current_stress_level }}">
+                            {{ user.current_stress_level }}/10
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar" 
+                             style="width: {{ user.current_stress_level|add:"0"|multiply:10 }}%;
+                                    background-color: {% if user.current_stress_level <= 3 %}#4fc3a1{% elif user.current_stress_level <= 6 %}#ffd166{% else %}#ff6b6b{% endif %}">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Learning Style</h6>
+                    <p>
+                        {% if user.learning_style %}
+                            {{ user.get_learning_style_display }}
+                        {% else %}
+                            <span class="text-muted">Not set yet</span>
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Therapeutic Mode</h6>
+                    <p>
+                        {% if user.gentle_mode %}
+                            <span class="badge bg-info">Gentle Mode Active</span>
+                            <small class="d-block text-muted mt-1">Extra support and slower pacing</small>
+                        {% else %}
+                            <span class="badge bg-secondary">Standard Mode</span>
+                        {% endif %}
+                    </p>
+                </div>
+                
+                {% if user.breakthrough_moments %}
+                <div>
+                    <h6>Recent Breakthroughs</h6>
+                    <div class="breakthrough-list">
+                        {% for moment in user.breakthrough_moments|slice:":3" %}
+                        <div class="breakthrough-item mb-2">
+                            <small class="text-muted">{{ moment.date|date:"M d" }}</small>
+                            <div>{{ moment.description|truncatechars:100 }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Right Column - Learning Plan -->
+        <div class="col-md-3">
+            <div class="therapeutic-card h-100">
+                <h4 class="mb-3"><i class="fas fa-calendar-check me-2"></i>Today's Plan</h4>
+                
+                <div class="learning-plan">
+                    {% with plan=user.get_safe_learning_plan %}
+                    <div class="plan-type mb-3">
+                        <span class="badge plan-badge plan-{{ plan.type }}">
+                            {{ plan.type|title }} Mode
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Duration</small>
+                        <strong>{{ plan.max_duration }} minutes</strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Max Difficulty</small>
+                        <div class="difficulty-stars">
+                            {% for i in "12345" %}
+                                <i class="fas fa-star{% if forloop.counter > plan.max_difficulty %} text-muted{% else %} text-warning{% endif %}"></i>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="suggested-activities">
+                        <small class="text-muted d-block mb-2">Suggested Activities</small>
+                        <ul class="list-unstyled">
+                            {% for activity in plan.suggested_activities|slice:":3" %}
+                            <li class="mb-1">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                {{ activity|title|replace:"_" " " }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endwith %}
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a href="{% url 'learning:dashboard' %}" class="btn btn-sm btn-outline-primary">
+                        Start Learning
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #4a6fa5;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.affirmation-box {
+    background: linear-gradient(135deg, #fff8e1, #fff);
+    border-left: 4px solid #ffd54f;
+    font-style: italic;
+}
+
+.emotional-badge {
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.emotional-avoidant { background: #e3f2fd; color: #1565c0; }
+.emotional-anxious { background: #fff3e0; color: #ef6c00; }
+.emotional-doubtful { background: #f3e5f5; color: #7b1fa2; }
+.emotional-overwhelmed { background: #ffebee; color: #c62828; }
+.emotional-balanced { background: #e8f5e9; color: #2e7d32; }
+.emotional-resilient { background: #fff8e1; color: #ff8f00; }
+
+.stress-level {
+    font-weight: bold;
+}
+
+.stress-1, .stress-2, .stress-3 { color: #4fc3a1; }
+.stress-4, .stress-5, .stress-6 { color: #ffd166; }
+.stress-7, .stress-8, .stress-9, .stress-10 { color: #ff6b6b; }
+
+.plan-badge {
+    padding: 5px 10px;
+    border-radius: 15px;
+}
+
+.plan-gentle_review { background: #e8f5e9; color: #2e7d32; }
+.plan-comfort_zone { background: #fff3e0; color: #ef6c00; }
+.plan-growth_focused { background: #e3f2fd; color: #1565c0; }
+
+.difficulty-stars {
+    color: #ffd166;
+}
+</style>
+{% endblock %}

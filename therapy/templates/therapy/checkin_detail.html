@@ -1,0 +1,173 @@
+{% extends 'therapy/base.html' %}
+
+{% block title %}Check-in Details{% endblock %}
+{% block page_title %}Emotional Check-in Details{% endblock %}
+{% block page_subtitle %}{{ checkin.created_at|date:"F j, Y g:i A" }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-heartbeat"></i> Check-in Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-feather"></i> Primary Emotion</h6>
+                        <div class="alert {% if checkin.primary_emotion in 'calm,focused,hopeful,excited' %}alert-success{% else %}alert-info{% endif %}">
+                            <h4 class="mb-0">{{ checkin.get_primary_emotion_display }}</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-line"></i> Intensity: {{ checkin.intensity }}/10</h6>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar" style="width: {{ checkin.intensity|add:"0" }}0%">
+                                {{ checkin.intensity }}/10
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if checkin.secondary_emotions %}
+                <div class="mb-4">
+                    <h6><i class="fas fa-layer-group"></i> Secondary Emotions</h6>
+                    <div>
+                        {% for emotion in checkin.secondary_emotions %}
+                        <span class="badge bg-secondary me-1">{{ emotion|title }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if checkin.physical_symptoms %}
+                <div class="mb-4">
+                    <h6><i class="fas fa-body"></i> Physical Symptoms</h6>
+                    <div>
+                        {% for symptom in checkin.physical_symptoms %}
+                        <span class="badge bg-info me-1">{{ symptom|title }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if checkin.trigger_description %}
+                <div class="mb-4">
+                    <h6><i class="fas fa-bolt"></i> Trigger / Context</h6>
+                    <div class="alert alert-light">
+                        {{ checkin.trigger_description }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if checkin.notes %}
+                <div class="mb-4">
+                    <h6><i class="fas fa-sticky-note"></i> Notes & Reflection</h6>
+                    <div class="alert alert-light">
+                        {{ checkin.notes|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if checkin.key_insight %}
+                <div class="mb-4">
+                    <h6><i class="fas fa-lightbulb"></i> Key Insight</h6>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-quote-left"></i> {{ checkin.key_insight }} <i class="fas fa-quote-right"></i>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if checkin.coping_strategies_used %}
+                <div class="mb-4">
+                    <h6><i class="fas fa-hands-helping"></i> Coping Strategies Used</h6>
+                    <ul class="list-group">
+                        {% for strategy in checkin.coping_strategies_used %}
+                        <li class="list-group-item">{{ strategy }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% if checkin.coping_effectiveness %}
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            Effectiveness: {{ checkin.coping_effectiveness }}/10
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Suggested Strategies -->
+        {% if suggested_strategies %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-lightbulb"></i> Suggested Strategies</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for strategy in suggested_strategies %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <strong>{{ strategy.name }}</strong>
+                            <small class="text-muted">{{ strategy.duration }} min</small>
+                        </div>
+                        <small class="text-muted">{{ strategy.type|title }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+                <a href="{% url 'therapy:strategies_list' %}?emotion={{ checkin.primary_emotion }}" 
+                   class="btn btn-outline-primary btn-sm w-100 mt-3">
+                    <i class="fas fa-search"></i> More strategies for {{ checkin.get_primary_emotion_display }}
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Similar Check-ins -->
+        {% if similar_checkins %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-history"></i> Similar Past Check-ins</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for similar in similar_checkins %}
+                    <a href="{% url 'therapy:checkin_detail' similar.pk %}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <small>{{ similar.created_at|date:"M d" }}</small>
+                            <small class="text-muted">{{ similar.intensity }}/10</small>
+                        </div>
+                        <small class="text-muted">
+                            {{ similar.notes|truncatewords:10|default:"No notes" }}
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'therapy:checkin_create' %}" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-plus"></i> New Check-in
+                </a>
+                <a href="{% url 'therapy:checkin_list' %}" class="btn btn-outline-secondary w-100 mb-2">
+                    <i class="fas fa-list"></i> View All Check-ins
+                </a>
+                <a href="{% url 'therapy:dashboard' %}" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-home"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

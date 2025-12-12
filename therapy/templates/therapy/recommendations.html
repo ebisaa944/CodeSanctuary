@@ -1,0 +1,160 @@
+{% extends 'therapy/base.html' %}
+
+{% block title %}Recommended Strategies{% endblock %}
+{% block page_title %}Personalized Recommendations{% endblock %}
+{% block page_subtitle %}Strategies tailored to your current state{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-magic"></i> Based on your input</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="alert alert-info">
+                            <small class="text-muted">Emotion</small><br>
+                            <strong>{{ form_data.emotion|title }}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="alert alert-warning">
+                            <small class="text-muted">Intensity</small><br>
+                            <strong>{{ form_data.intensity }}/10</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="alert alert-success">
+                            <small class="text-muted">Time Available</small><br>
+                            <strong>{{ form_data.time_available }} minutes</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="alert alert-secondary">
+                            <small class="text-muted">Coding Preference</small><br>
+                            <strong>{% if form_data.prefer_coding %}Yes{% else %}No{% endif %}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% if recommendations %}
+    <div class="col-md-12">
+        <h5 class="mb-4"><i class="fas fa-hands-helping"></i> Recommended Strategies</h5>
+        <div class="row">
+            {% for strategy in recommendations %}
+            <div class="col-md-4 mb-4">
+                <div class="card strategy-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title">{{ strategy.name }}</h5>
+                            {% if strategy.coding_integration %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-code"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <p class="card-text small">{{ strategy.description|truncatewords:30 }}</p>
+                        
+                        <div class="strategy-meta mb-3">
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>
+                                    <i class="fas fa-tag"></i> {{ strategy.get_strategy_type_display }}
+                                </span>
+                                <span>
+                                    <i class="fas fa-clock"></i> {{ strategy.estimated_minutes }} min
+                                </span>
+                                <span>
+                                    <i class="fas fa-signal"></i> Level {{ strategy.difficulty_level }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'therapy:strategy_detail' strategy.pk %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-info-circle"></i> View Details
+                            </a>
+                            <button class="btn btn-outline-success btn-sm" onclick="markAsTried({{ strategy.pk }})">
+                                <i class="fas fa-check"></i> Mark as Tried
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4>No strategies found</h4>
+                <p class="text-muted">Try adjusting your criteria or browse all strategies.</p>
+                <a href="{% url 'therapy:get_recommendations' %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Adjust Criteria
+                </a>
+                <a href="{% url 'therapy:strategies_list' %}" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-list"></i> Browse All Strategies
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h6><i class="fas fa-lightbulb"></i> Next Steps</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="small text-muted">
+                            <li>Choose one strategy to try first</li>
+                            <li>Start with the shortest/easiest if you're overwhelmed</li>
+                            <li>Set a timer for the suggested duration</li>
+                            <li>Notice how you feel before and after</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-end">
+                            <a href="{% url 'therapy:checkin_create' %}" class="btn btn-primary">
+                                <i class="fas fa-heartbeat"></i> Record a Check-in After Trying
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAsTried(strategyId) {
+    $.ajax({
+        url: '/therapy/api/strategies/' + strategyId + '/mark_tried/',
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            alert(response.message);
+        },
+        error: function() {
+            alert('Could not mark as tried. Please try again.');
+        }
+    });
+}
+</script>
+{% endblock %}

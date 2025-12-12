@@ -16,34 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    # Admin
     path('admin/', admin.site.urls),
-    
-    # API Documentation
-    path('api/docs/', TemplateView.as_view(
-        template_name='api_docs.html',
-        extra_context={'title': 'Code Sanctuary API Docs'}
-    ), name='api-docs'),
-    
-    # API Endpoints
-    path('api/users/', include('apps.users.urls')),
-    path('api/therapy/', include('apps.therapy.urls')),
-    path('api/learning/', include('apps.learning.urls')),
-    path('api/social/', include('apps.social.urls')),
-    
-    # Frontend (for React/Vue)
-    path('', TemplateView.as_view(template_name='index.html'), name='home'),
-    
-    # Authentication (Django built-in)
-    path('accounts/', include('django.contrib.auth.urls')),
+    path('', include('users.urls', namespace='users')),
+    path('therapy/', include('therapy.urls', namespace='therapy')),
+    path('learning/', include('learning.urls', namespace='learning')),
+    path('social/', include('social.urls', namespace='social')),
+    path('chat/', include('chat.urls', namespace='chat')),
 ]
 
-# Serve static/media in development
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

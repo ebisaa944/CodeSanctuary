@@ -1,0 +1,250 @@
+{% extends 'therapy/base.html' %}
+
+{% block title %}{{ strategy.name }}{% endblock %}
+{% block page_title %}{{ strategy.name }}{% endblock %}
+{% block page_subtitle %}{{ strategy.get_strategy_type_display }} Strategy{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Strategy Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="strategy-header mb-4">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h3>{{ strategy.name }}</h3>
+                            <div class="badges mb-3">
+                                <span class="badge bg-primary me-2">
+                                    <i class="fas fa-tag"></i> {{ strategy.get_strategy_type_display }}
+                                </span>
+                                <span class="badge bg-success me-2">
+                                    <i class="fas fa-clock"></i> {{ strategy.estimated_minutes }} minutes
+                                </span>
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-signal"></i> Level {{ strategy.difficulty_level }}
+                                </span>
+                                {% if strategy.coding_integration %}
+                                <span class="badge bg-info me-2">
+                                    <i class="fas fa-code"></i> Coding Integration
+                                </span>
+                                {% endif %}
+                                {% if is_recommended %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-heart"></i> Recommended for you
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if strategy.target_emotions %}
+                    <div class="mb-3">
+                        <h6><i class="fas fa-heart"></i> Best for these emotions:</h6>
+                        <div>
+                            {% for emotion in strategy.target_emotions %}
+                            <span class="badge bg-secondary me-1">{{ emotion|title }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="strategy-description mb-4">
+                    <h6><i class="fas fa-align-left"></i> Description</h6>
+                    <p>{{ strategy.description }}</p>
+                </div>
+                
+                {% if instructions %}
+                <div class="strategy-instructions mb-4">
+                    <h6><i class="fas fa-list-ol"></i> Step-by-Step Instructions</h6>
+                    <ol class="list-group list-group-numbered">
+                        {% for instruction in instructions %}
+                        <li class="list-group-item border-0">{{ instruction }}</li>
+                        {% endfor %}
+                    </ol>
+                </div>
+                {% endif %}
+                
+                {% if strategy.tips_for_success %}
+                <div class="strategy-tips mb-4">
+                    <h6><i class="fas fa-lightbulb"></i> Tips for Success</h6>
+                    <div class="alert alert-success">
+                        {{ strategy.tips_for_success }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if strategy.common_challenges %}
+                <div class="strategy-challenges mb-4">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Common Challenges</h6>
+                    <div class="alert alert-warning">
+                        {{ strategy.common_challenges }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if strategy.coding_integration and strategy.coding_template %}
+                <div class="coding-section mb-4">
+                    <h6><i class="fas fa-code"></i> Coding Template ({{ strategy.coding_language }})</h6>
+                    <pre class="bg-dark text-light p-3 rounded"><code>{{ strategy.coding_template }}</code></pre>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+            </div>
+            <div class="card-body text-center">
+                <button class="btn btn-primary w-100 mb-2" onclick="markAsTried()">
+                    <i class="fas fa-check"></i> Mark as Tried
+                </button>
+                <button class="btn btn-outline-primary w-100 mb-2" onclick="startTimer()">
+                    <i class="fas fa-play"></i> Start {{ strategy.estimated_minutes }}-min Timer
+                </button>
+                <a href="{% url 'therapy:get_recommendations' %}" class="btn btn-outline-success w-100">
+                    <i class="fas fa-magic"></i> Get More Recommendations
+                </a>
+            </div>
+        </div>
+        
+        <!-- Timer Display (hidden by default) -->
+        <div class="card mb-4" id="timerCard" style="display: none;">
+            <div class="card-header">
+                <h6><i class="fas fa-clock"></i> Strategy Timer</h6>
+            </div>
+            <div class="card-body text-center">
+                <h1 id="timerDisplay" class="display-4">00:00</h1>
+                <div class="mt-3">
+                    <button class="btn btn-success" onclick="pauseTimer()">
+                        <i class="fas fa-pause"></i> Pause
+                    </button>
+                    <button class="btn btn-danger" onclick="stopTimer()">
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Similar Strategies -->
+        {% if similar_strategies %}
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-random"></i> Similar Strategies</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for similar in similar_strategies %}
+                    <a href="{% url 'therapy:strategy_detail' similar.pk %}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ similar.name }}</h6>
+                            <small class="text-muted">{{ similar.estimated_minutes }}min</small>
+                        </div>
+                        <small class="text-muted">{{ similar.get_strategy_type_display }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Gentle Reminder -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6><i class="fas fa-heart"></i> Remember</h6>
+                <p class="small text-muted mb-0">
+                    Strategies work differently for everyone. Be patient with yourself as you explore what helps you.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let timerInterval;
+let timeLeft = {{ strategy.estimated_minutes }} * 60; // Convert to seconds
+let isRunning = false;
+
+function startTimer() {
+    if (!isRunning) {
+        $('#timerCard').show();
+        isRunning = true;
+        
+        timerInterval = setInterval(function() {
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                $('#timerDisplay').text("Time's up!").addClass('text-success');
+                showNotification("Great job! You completed the strategy.", 'success');
+                return;
+            }
+            
+            timeLeft--;
+            updateTimerDisplay();
+        }, 1000);
+    }
+}
+
+function pauseTimer() {
+    clearInterval(timerInterval);
+    isRunning = false;
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+    $('#timerCard').hide();
+    timeLeft = {{ strategy.estimated_minutes }} * 60;
+    updateTimerDisplay();
+    isRunning = false;
+}
+
+function updateTimerDisplay() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    $('#timerDisplay').text(
+        minutes.toString().padStart(2, '0') + ':' + 
+        seconds.toString().padStart(2, '0')
+    );
+}
+
+function markAsTried() {
+    $.ajax({
+        url: "{% url 'therapy:api_checkin' %}",
+        method: 'POST',
+        data: {
+            csrfmiddlewaretoken: '{{ csrf_token }}',
+            note: `Tried strategy: {{ strategy.name }}`,
+            primary_emotion: 'calm'  // Default emotion for strategy use
+        },
+        success: function(response) {
+            showNotification("Strategy marked as tried! Consider rating its effectiveness in your next check-in.", 'success');
+            $('button[onclick="markAsTried()"]')
+                .prop('disabled', true)
+                .html('<i class="fas fa-check"></i> Already Tried')
+                .removeClass('btn-primary').addClass('btn-secondary');
+        },
+        error: function() {
+            showNotification("Could not mark as tried. Please try again.", 'danger');
+        }
+    });
+}
+
+function showNotification(message, type) {
+    // Simple notification implementation
+    alert(message); // You can replace this with a better notification system
+}
+
+$(document).ready(function() {
+    updateTimerDisplay();
+});
+</script>
+{% endblock %}

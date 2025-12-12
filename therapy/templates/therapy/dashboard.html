@@ -1,0 +1,229 @@
+{% extends 'therapy/base.html' %}
+
+{% block title %}Therapy Dashboard{% endblock %}
+{% block page_title %}Your Therapeutic Journey{% endblock %}
+{% block page_subtitle %}Track emotions, explore coping strategies, and grow through awareness{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Quick Stats -->
+    <div class="col-md-3 mb-4">
+        <div class="card emotion-card" style="border-color: #4CAF50;">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-heartbeat"></i> Today's Check-ins</h5>
+                <h2 class="display-4">{{ today_checkins }}</h2>
+                <a href="{% url 'therapy:checkin_create' %}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-plus"></i> Add New
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card emotion-card" style="border-color: #2196F3;">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-history"></i> Total Check-ins</h5>
+                <h2 class="display-4">{{ total_checkins }}</h2>
+                <a href="{% url 'therapy:checkin_list' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-list"></i> View All
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card emotion-card" style="border-color: #9C27B0;">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-hands-helping"></i> Strategies</h5>
+                <h2 class="display-4">{{ recommended_strategies|length }}</h2>
+                <a href="{% url 'therapy:strategies_list' %}" class="btn btn-outline-purple btn-sm">
+                    <i class="fas fa-search"></i> Explore
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card emotion-card" style="border-color: #FF9800;">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-chart-line"></i> Current State</h5>
+                {% if current_emotion %}
+                <h4>{{ current_emotion|title }}</h4>
+                {% else %}
+                <h4>No check-in today</h4>
+                {% endif %}
+                <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#quickCheckinModal">
+                    <i class="fas fa-bolt"></i> Quick Check-in
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Check-ins -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Recent Emotional Check-ins</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_checkins %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Emotion</th>
+                                <th>Intensity</th>
+                                <th>Notes</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for checkin in recent_checkins %}
+                            <tr>
+                                <td>
+                                    <small>{{ checkin.created_at|date:"g:i A" }}</small><br>
+                                    <small class="text-muted">{{ checkin.created_at|date:"M d" }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ checkin.get_primary_emotion_display }}</strong>
+                                    {% if checkin.secondary_emotions %}
+                                    <br><small class="text-muted">
+                                        +{{ checkin.secondary_emotions|length }} more
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 10px;">
+                                        <div class="progress-bar" style="width: {{ checkin.intensity|add:"0" }}0%"></div>
+                                    </div>
+                                    <small>{{ checkin.intensity }}/10</small>
+                                </td>
+                                <td>
+                                    {% if checkin.notes %}
+                                    <small>{{ checkin.notes|truncatewords:10 }}</small>
+                                    {% else %}
+                                    <small class="text-muted">No notes</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'therapy:checkin_detail' checkin.pk %}" class="btn btn-sm btn-outline-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{% url 'therapy:checkin_list' %}" class="btn btn-primary">
+                        <i class="fas fa-list"></i> View All Check-ins
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-heartbeat fa-3x text-muted mb-3"></i>
+                    <h4>No check-ins yet</h4>
+                    <p class="text-muted">Start by recording how you feel</p>
+                    <a href="{% url 'therapy:checkin_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create First Check-in
+                    </a>
+                    <button class="btn btn-outline-primary ms-2" data-bs-toggle="modal" data-bs-target="#quickCheckinModal">
+                        <i class="fas fa-bolt"></i> Quick Check-in
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommended Strategies -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> Recommended Strategies</h5>
+            </div>
+            <div class="card-body">
+                {% if recommended_strategies %}
+                <div class="list-group">
+                    {% for strategy in recommended_strategies %}
+                    <a href="{% url 'therapy:strategy_detail' strategy.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ strategy.name }}</h6>
+                            <small class="text-muted">{{ strategy.estimated_minutes }} min</small>
+                        </div>
+                        <p class="mb-1 small">{{ strategy.description|truncatewords:15 }}</p>
+                        <small class="text-muted">
+                            <i class="fas fa-tag"></i> {{ strategy.get_strategy_type_display }}
+                            <span class="ms-2">
+                                <i class="fas fa-signal"></i> Level {{ strategy.difficulty_level }}
+                            </span>
+                        </small>
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="mt-3 text-center">
+                    <a href="{% url 'therapy:get_recommendations' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-magic"></i> Get Personalized Recommendations
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-hands-helping fa-2x text-muted mb-3"></i>
+                    <p>Complete a check-in to get personalized strategy recommendations.</p>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#quickCheckinModal">
+                        <i class="fas fa-bolt"></i> Quick Check-in
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body quick-actions text-center">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#quickCheckinModal">
+                    <i class="fas fa-heartbeat"></i> Quick Check-in
+                </button>
+                <a href="{% url 'therapy:checkin_create' %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Full Check-in
+                </a>
+                <a href="{% url 'therapy:strategies_list' %}?duration=5" class="btn btn-info">
+                    <i class="fas fa-clock"></i> 5-min Strategies
+                </a>
+            </div>
+        </div>
+        
+        <!-- Gentle Reminder -->
+        <div class="card mt-4 gentle-reminder">
+            <div class="card-body text-center">
+                <i class="fas fa-heart fa-2x text-danger mb-3"></i>
+                <h6>Remember...</h6>
+                <p class="small">Emotions are information, not instructions. Notice them without judgment.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Load quick checkin form via AJAX
+    $('#quickCheckinModal').on('show.bs.modal', function () {
+        $.ajax({
+            url: "{% url 'therapy:quick_checkin' %}",
+            success: function(data) {
+                $('#quickCheckinFormContainer').html(data);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

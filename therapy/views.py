@@ -238,14 +238,28 @@ def checkin_create(request):
             checkin = form.save(commit=False)
             checkin.user = request.user
             
-            # Process JSON fields
-            if 'secondary_emotions' in form.cleaned_data:
+            # Process JSON fields - WITH NULL CHECKS
+            if 'secondary_emotions' in form.cleaned_data and form.cleaned_data['secondary_emotions']:
                 checkin.secondary_emotions = form.cleaned_data['secondary_emotions']
-            if 'physical_symptoms' in form.cleaned_data:
+            
+            if 'physical_symptoms' in form.cleaned_data and form.cleaned_data['physical_symptoms']:
                 checkin.physical_symptoms = form.cleaned_data['physical_symptoms']
-            if 'context_tags' in form.cleaned_data:
+            
+            # FIX: Check if context_tags exists and is not None
+            if 'context_tags' in form.cleaned_data and form.cleaned_data['context_tags']:
                 tags = form.cleaned_data['context_tags'].split(',')
                 checkin.context_tags = [tag.strip() for tag in tags if tag.strip()]
+            else:
+                checkin.context_tags = []  # Set to empty list if None
+            
+            # Also fix other optional fields
+            if 'coping_strategies_used' in form.cleaned_data and form.cleaned_data['coping_strategies_used']:
+                # Handle coping_strategies_used if it's a string
+                if isinstance(form.cleaned_data['coping_strategies_used'], str):
+                    strategies = form.cleaned_data['coping_strategies_used'].split(',')
+                    checkin.coping_strategies_used = [s.strip() for s in strategies if s.strip()]
+                else:
+                    checkin.coping_strategies_used = form.cleaned_data['coping_strategies_used']
             
             checkin.save()
             

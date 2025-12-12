@@ -37,6 +37,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'rest_framework',                    # Django REST Framework
+    'django_filters',                    # Django Filters
+    'corsheaders',                       # CORS for frontend
+
+
     'apps.therapy',
     'apps.users',
     'apps.learning',
@@ -58,13 +64,17 @@ ROOT_URLCONF = 'therapeutic_coding.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
+                # Custom context processors
+                'apps.users.context_processors.therapeutic_settings',
             ],
         },
     },
@@ -118,8 +128,48 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+# Static files (CSS, JavaScript, Images)
+# Static files configuration
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# 2. Set the custom user model
-AUTH_USER_MODEL = 'users.TherapeuticUser'
+# Add REST Framework configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+}
+
+# Add these at the bottom
+AUTH_USER_MODEL = 'users.TherapeuticUser'  # CRITICAL
+
+# CORS Settings (for frontend)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# Login/Logout URLs
+LOGIN_URL = '/users/login/'
+LOGIN_REDIRECT_URL = '/learning/dashboard/'
+LOGOUT_REDIRECT_URL = '/'
+
+# Email backend (for password reset)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

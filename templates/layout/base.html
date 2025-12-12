@@ -1,0 +1,217 @@
+<!-- templates/layout/base.html -->
+<!DOCTYPE html>
+<html lang="en" class="{% if request.user.gentle_mode %}gentle-mode{% endif %} {% if request.session.high_contrast %}high-contrast{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Code Sanctuary - Therapeutic Learning{% endblock %}</title>
+    
+    <!-- Therapeutic Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Comfortaa:wght@400;500;600;700&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Therapeutic Design System -->
+    <link rel="stylesheet" href="/static/css/therapeutic-design-system.css">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- App-specific CSS -->
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Therapeutic Meta Tags -->
+    <meta name="description" content="A gentle, therapeutic platform for learning coding with emotional support and mindfulness.">
+    <meta name="theme-color" content="#5D93E1">
+    <link rel="icon" href="/static/images/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+    <!-- Therapeutic Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{% url 'home' %}" class="nav-logo">
+                <i class="fas fa-spa"></i>
+                <span>Code Sanctuary</span>
+            </a>
+            
+            <div class="nav-menu">
+                <a href="{% url 'learning:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'learning' %}active{% endif %}">
+                    <i class="fas fa-graduation-cap"></i>
+                    Learning
+                </a>
+                <a href="{% url 'therapy:checkin' %}" class="nav-link {% if request.resolver_match.app_name == 'therapy' %}active{% endif %}">
+                    <i class="fas fa-heart"></i>
+                    Therapy
+                </a>
+                <a href="{% url 'social:community' %}" class="nav-link {% if request.resolver_match.app_name == 'social' %}active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    Community
+                </a>
+                
+                {% if user.is_authenticated %}
+                <div class="dropdown">
+                    <button class="btn btn-gentle dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle"></i>
+                        {{ user.username }}
+                        <span class="emotion-indicator emotion-{{ user.emotional_profile|default:'balanced' }}">
+                            {{ user.get_emotional_profile_display|default:"Balanced" }}
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'users:profile' %}">Profile</a></li>
+                        <li><a class="dropdown-item" href="{% url 'users:settings' %}">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'users:logout' %}">Logout</a></li>
+                    </ul>
+                </div>
+                {% else %}
+                <a href="{% url 'users:login' %}" class="btn btn-gentle">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Login
+                </a>
+                <a href="{% url 'users:register' %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i>
+                    Join Free
+                </a>
+                {% endif %}
+            </div>
+            
+            <!-- Accessibility Controls -->
+            <div class="accessibility-controls">
+                <button class="btn btn-sm btn-secondary" onclick="toggleGentleMode()" title="Toggle Gentle Mode">
+                    <i class="fas fa-spa"></i>
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="toggleHighContrast()" title="High Contrast">
+                    <i class="fas fa-adjust"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Gentle Notifications -->
+    <div id="gentle-notifications" class="notifications-container"></div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Therapeutic Breadcrumbs -->
+        <nav aria-label="breadcrumb" class="breadcrumb-nav">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}"><i class="fas fa-home"></i></a></li>
+                {% block breadcrumbs %}{% endblock %}
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <header class="page-header">
+            <h1 class="page-title">{% block page_title %}Welcome to Code Sanctuary{% endblock %}</h1>
+            <p class="page-subtitle">{% block page_subtitle %}A gentle space for therapeutic learning{% endblock %}</p>
+            
+            <!-- Emotional State Check-in (if authenticated) -->
+            {% if user.is_authenticated %}
+            <div class="emotional-checkin-widget">
+                <span class="current-emotion-label">How are you feeling?</span>
+                <div class="emotion-buttons">
+                    <button class="emotion-btn emotion-calm" data-emotion="calm">
+                        <i class="fas fa-smile"></i> Calm
+                    </button>
+                    <button class="emotion-btn emotion-focused" data-emotion="focused">
+                        <i class="fas fa-bullseye"></i> Focused
+                    </button>
+                    <button class="emotion-btn emotion-anxious" data-emotion="anxious">
+                        <i class="fas fa-wind"></i> Anxious
+                    </button>
+                    <button class="emotion-btn emotion-hopeful" data-emotion="hopeful">
+                        <i class="fas fa-star"></i> Hopeful
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </header>
+
+        <!-- Therapeutic Messages -->
+        {% if messages %}
+        <div class="therapeutic-messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} therapeutic-alert">
+                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Main Content Block -->
+        <div class="content-wrapper">
+            {% block content %}
+            <!-- Default content if child template doesn't override -->
+            <div class="welcome-card card card-gentle animate-breathing">
+                <h2><i class="fas fa-spa"></i> Welcome to Your Therapeutic Learning Journey</h2>
+                <p>Take a deep breath. You're in a safe, gentle space designed for learning at your own pace.</p>
+                <div class="welcome-actions">
+                    <a href="{% url 'learning:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-play-circle"></i> Start Learning
+                    </a>
+                    <a href="{% url 'therapy:checkin' %}" class="btn btn-gentle">
+                        <i class="fas fa-heartbeat"></i> Emotional Check-in
+                    </a>
+                </div>
+            </div>
+            {% endblock %}
+        </div>
+    </main>
+
+    <!-- Therapeutic Footer -->
+    <footer class="therapeutic-footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3><i class="fas fa-spa"></i> Code Sanctuary</h3>
+                <p>A gentle approach to learning technology with emotional intelligence.</p>
+                <p class="footer-motto">Progress, not perfection. Growth, not pressure.</p>
+            </div>
+            
+            <div class="footer-section">
+                <h4>Journey</h4>
+                <ul>
+                    <li><a href="{% url 'learning:dashboard' %}">Learning Dashboard</a></li>
+                    <li><a href="{% url 'therapy:checkin' %}">Emotional Check-in</a></li>
+                    <li><a href="{% url 'social:community' %}">Support Community</a></li>
+                    <li><a href="{% url 'users:profile' %}">Your Progress</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="#">Gentle Coding Guides</a></li>
+                    <li><a href="#">Mindfulness Exercises</a></li>
+                    <li><a href="#">Coping Strategies</a></li>
+                    <li><a href="#">Accessibility Tools</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-section">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="#">Safety Guidelines</a></li>
+                    <li><a href="#">Crisis Resources</a></li>
+                    <li><a href="#">Community Guidelines</a></li>
+                    <li><a href="#">Contact Therapists</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2024 Code Sanctuary. All rights reserved. Designed with compassion and care.</p>
+            <p class="gentle-reminder">Remember to be kind to yourself today. You're doing better than you think. 💙</p>
+        </div>
+    </footer>
+
+    <!-- Therapeutic JavaScript -->
+    <script src="/static/js/therapeutic-core.js"></script>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- App-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

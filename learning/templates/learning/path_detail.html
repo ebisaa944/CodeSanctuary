@@ -1,0 +1,442 @@
+<!-- learning/templates/learning/path_detail.html -->
+{% extends 'learning/base.html' %}
+{% load static %}
+{% load learning_filters %}
+
+{% block title %}{{ path.name }}{% endblock %}
+{% block page_title %}{{ path.name }}{% endblock %}
+{% block page_subtitle %}{% if path.get_difficulty_level_display %}{{ path.get_difficulty_level_display }} • {% endif %}{{ path.target_language|title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Path Overview -->
+    <div class="col-lg-8">
+        <div class="card mb-4 therapeutic-card">
+            <div class="card-header therapeutic-header d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-{{ path.difficulty_level|get_difficulty_color }} me-2">
+                        {% if path.get_difficulty_level_display %}
+                            {{ path.get_difficulty_level_display }}
+                        {% else %}
+                            Level {{ path.difficulty_level }}
+                        {% endif %}
+                    </span>
+                    <span class="badge bg-secondary">{{ path.target_language|title }}</span>
+                    {% if progress_data.percentage == 100 %}
+                    <span class="badge bg-success ms-2">
+                        <i class="fas fa-check-circle me-1"></i> Completed
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% if user.is_staff %}
+                        <li>
+                            <a class="dropdown-item" href="/admin/learning/learningpath/{{ path.id }}/change/">
+                                <i class="fas fa-edit me-2"></i> Edit Path
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Progress Bar -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <h6 class="mb-0">Your Progress</h6>
+                        <span class="fw-bold">{{ progress_data.percentage|floatformat:"0" }}%</span>
+                    </div>
+                    <div class="progress therapeutic-progress-lg" style="height: 20px;">
+                        <div class="progress-bar bg-{{ progress_data.percentage|get_progress_color }}" 
+                             role="progressbar" 
+                             style="width: {{ progress_data.percentage|default:0 }}%"
+                             aria-valuenow="{{ progress_data.percentage|default:0 }}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                            {{ progress_data.completed|default:0 }}/{{ progress_data.total|default:1 }} activities
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2 small text-muted">
+                        <span>Started: {{ progress_data.completed|default:0 }} activities</span>
+                        <span>
+                            {% if progress_data.estimated_remaining %}
+                            Est. {{ progress_data.estimated_remaining|floatformat:"0" }} min remaining
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Description -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-info-circle me-2"></i>About This Path</h6>
+                    <p>{{ path.description|default:"No description available."|linebreaks }}</p>
+                </div>
+                
+                <!-- Therapeutic Context -->
+                <div class="alert alert-info">
+                    <div class="d-flex">
+                        <i class="fas fa-hands-helping fa-2x me-3"></i>
+                        <div>
+                            <h6 class="alert-heading">Therapeutic Approach</h6>
+                            <p class="mb-0">{{ therapeutic_context.approach|default:"Gradual, gentle progression at your own pace." }}</p>
+                            {% if therapeutic_context.pace %}
+                            <p class="mb-0 mt-2"><strong>Suggested Pace:</strong> {{ therapeutic_context.pace }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Start/Continue Button -->
+                <div class="d-grid gap-2 d-md-block mb-4">
+                    {% if progress_data.completed == progress_data.total %}
+                    <button class="btn btn-success" disabled>
+                        <i class="fas fa-check-circle me-2"></i> Path Completed
+                    </button>
+                    <a href="{% url 'learning:paths' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-road me-2"></i> Explore Other Paths
+                    </a>
+                    {% else %}
+                    {% with next_activity=activities|first %}
+                    {% if next_activity %}
+                    <a href="{% url 'learning:activity_detail' slug=next_activity.slug %}" 
+                       class="btn btn-primary btn-lg">
+                        <i class="fas fa-play-circle me-2"></i>
+                        {% if progress_data.completed > 0 %}
+                        Continue Learning
+                        {% else %}
+                        Start Learning Path
+                        {% endif %}
+                    </a>
+                    {% else %}
+                    <button class="btn btn-primary btn-lg" disabled>
+                        <i class="fas fa-play-circle me-2"></i> Start Learning Path
+                    </button>
+                    {% endif %}
+                    {% endwith %}
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#shareModal">
+                        <i class="fas fa-share-alt me-2"></i> Share Path
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar Stats & Info -->
+    <div class="col-lg-4">
+        <!-- Path Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Path Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="display-6 text-primary">{{ path.estimated_total_hours|default:1 }}</div>
+                        <div class="small text-muted">Total Hours</div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="display-6 text-success">{{ path.max_daily_minutes|default:30 }}</div>
+                        <div class="small text-muted">Daily Minutes</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="display-6 text-info">{{ activities|length|default:0 }}</div>
+                        <div class="small text-muted">Activities</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="display-6 text-warning">{{ path.difficulty_level|default:1 }}/6</div>
+                        <div class="small text-muted">Difficulty</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Therapeutic Recommendations -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-heart me-2"></i>Recommended For</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% if therapeutic_context.suitable %}
+                        {% if therapeutic_context.suitable is not string %}
+                            {% for profile in therapeutic_context.suitable %}
+                            <span class="badge bg-{{ profile|get_emotional_alert_class }} p-2">
+                                <i class="fas fa-{{ profile|get_emotional_icon }} me-1"></i>
+                                {{ profile|title }}
+                            </span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="badge bg-{{ therapeutic_context.suitable|get_emotional_alert_class }} p-2">
+                                <i class="fas fa-{{ therapeutic_context.suitable|get_emotional_icon }} me-1"></i>
+                                {{ therapeutic_context.suitable|title }}
+                            </span>
+                        {% endif %}
+                    {% else %}
+                    <span class="badge bg-secondary p-2">
+                        <i class="fas fa-user me-1"></i> All Users
+                    </span>
+                    {% endif %}
+                </div>
+                <p class="small text-muted mt-3 mb-0">
+                    This path is designed to support emotional states with gentle progression.
+                </p>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% with next_activity=activities|first %}
+                    {% if next_activity %}
+                    <a href="{% url 'learning:activity_detail' slug=next_activity.slug %}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-forward me-2"></i> Next Activity
+                    </a>
+                    {% endif %}
+                    {% endwith %}
+                    
+                    <a href="{% url 'learning:progress_report' %}" 
+                       class="btn btn-outline-success">
+                        <i class="fas fa-chart-line me-2"></i> View Progress
+                    </a>
+                    
+                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#paceModal">
+                        <i class="fas fa-clock me-2"></i> Adjust Pace
+                    </button>
+                    
+                    <a href="{% url 'learning:paths' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Paths
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activities List -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-list-ol me-2"></i>Activities in This Path</h5>
+            </div>
+            <div class="card-body">
+                {% if activities %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="5%">#</th>
+                                <th>Activity</th>
+                                <th width="15%">Focus</th>
+                                <th width="15%">Time</th>
+                                <th width="15%">Status</th>
+                                <th width="10%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in activities %}
+                            {% with progress=user_progress|get_dict_value:activity.id %}
+                            <tr class="{% if progress and progress.status == 'completed' %}table-success{% elif progress and progress.status == 'in_progress' %}table-warning{% endif %}">
+                                <td class="fw-bold">{{ forloop.counter }}</td>
+                                <td>
+                                    <h6 class="mb-1">{{ activity.title|default:"Untitled Activity" }}</h6>
+                                    <p class="small text-muted mb-0">{{ activity.short_description|default:"" }}</p>
+                                    <div class="small">
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-signal me-1"></i>Level {{ activity.difficulty_level|default:1 }}
+                                        </span>
+                                        {% if activity.primary_language %}
+                                        <span class="badge bg-secondary ms-1">
+                                            {{ activity.primary_language }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ activity.therapeutic_focus|default:'general'|get_emotional_alert_class }}">
+                                        {{ activity.therapeutic_focus|default:"General"|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <i class="fas fa-clock me-1 text-muted"></i>
+                                    {{ activity.estimated_minutes|default:10 }}m
+                                </td>
+                                <td>
+                                    {% if progress %}
+                                    {% if progress.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i> Completed
+                                    </span>
+                                    {% elif progress.status == 'in_progress' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-spinner me-1"></i> In Progress
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-flag me-1"></i> Not Started
+                                    </span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-flag me-1"></i> Not Started
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'learning:activity_detail' slug=activity.slug %}" 
+                                       class="btn btn-sm {% if progress and progress.status == 'completed' %}btn-outline-success{% elif progress and progress.status == 'in_progress' %}btn-warning{% else %}btn-outline-primary{% endif %}">
+                                        {% if progress and progress.status == 'completed' %}
+                                        <i class="fas fa-redo"></i>
+                                        {% elif progress and progress.status == 'in_progress' %}
+                                        <i class="fas fa-play"></i>
+                                        {% else %}
+                                        <i class="fas fa-play"></i>
+                                        {% endif %}
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-clipboard-list fa-4x text-muted mb-4"></i>
+                    <h5 class="text-muted">No Activities Yet</h5>
+                    <p class="text-muted">Activities will be added to this path soon.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-share-alt me-2"></i>Share This Path</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Share Link</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="share-link" 
+                               value="{{ request.build_absolute_uri }}" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyShareLink()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Sharing learning journeys can be encouraging, but remember to respect your own pace and boundaries.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="paceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-clock me-2"></i>Adjust Your Pace</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Current daily limit: <strong>{{ path.max_daily_minutes|default:30 }} minutes</strong></p>
+                <div class="mb-3">
+                    <label class="form-label">Set personal daily limit:</label>
+                    <input type="range" class="form-range" id="pace-slider" min="5" max="120" 
+                           step="5" value="{{ path.max_daily_minutes|default:30 }}">
+                    <div class="d-flex justify-content-between">
+                        <small>5 min</small>
+                        <small id="pace-value">{{ path.max_daily_minutes|default:30 }} min</small>
+                        <small>120 min</small>
+                    </div>
+                </div>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Remember: Gentle, consistent progress is more sustainable than intense bursts.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="savePace()">Save Pace</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function copyShareLink() {
+    const shareLink = document.getElementById('share-link');
+    shareLink.select();
+    shareLink.setSelectionRange(0, 99999); // For mobile devices
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(shareLink.value).then(function() {
+        // Show feedback
+        const button = event.target.closest('button');
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Failed to copy: ', err);
+    });
+}
+
+$(document).ready(function() {
+    // Pace slider
+    $('#pace-slider').on('input', function() {
+        $('#pace-value').text($(this).val() + ' min');
+    });
+});
+
+function savePace() {
+    const pace = $('#pace-slider').val();
+    
+    // Simple notification (actual implementation would require API call)
+    $('#paceModal').modal('hide');
+    
+    // Show notification
+    const notification = document.createElement('div');
+    notification.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
+    notification.style.zIndex = '9999';
+    notification.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        Daily pace updated to ${pace} minutes
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}
+{% endblock %}

@@ -218,7 +218,7 @@ function updateTimerDisplay() {
 
 function markAsTried() {
     $.ajax({
-        url: "{% url 'therapy:api_checkin' %}",
+        url: "/therapy/checkin/",
         method: 'POST',
         data: {
             csrfmiddlewaretoken: '{{ csrf_token }}',

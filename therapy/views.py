@@ -307,10 +307,11 @@ def quick_checkin(request):
 
 @login_required
 def coping_strategies_list(request):
-    """List coping strategies"""
+    """List coping strategies - SQLite compatible version"""
+    # Start with all active strategies
     strategies = CopingStrategy.objects.filter(is_active=True)
     
-    # Apply simple filters
+    # Apply simple filters that work with SQLite
     strategy_type = request.GET.get('type', '')
     emotion_target = request.GET.get('emotion', '')
     max_duration = request.GET.get('duration', '')
@@ -320,8 +321,8 @@ def coping_strategies_list(request):
     if strategy_type:
         strategies = strategies.filter(strategy_type=strategy_type)
     
-    if emotion_target:
-        strategies = strategies.filter(target_emotions__contains=[emotion_target])
+    # IMPORTANT: For SQLite, we can't use target_emotions__contains
+    # We'll filter in Python instead
     
     if max_duration:
         strategies = strategies.filter(estimated_minutes__lte=int(max_duration))
@@ -332,14 +333,45 @@ def coping_strategies_list(request):
     if coding_only == 'yes':
         strategies = strategies.filter(coding_integration=True)
     
+    # Convert to list for Python filtering
+    strategies_list = list(strategies)
+    
+    # Filter by emotion in Python (SQLite compatible)
+    if emotion_target:
+        filtered_strategies = []
+        for strategy in strategies_list:
+            target_emotions = strategy.target_emotions
+            
+            # Handle different formats
+            if isinstance(target_emotions, str):
+                try:
+                    import json
+                    target_emotions = json.loads(target_emotions)
+                except:
+                    # If it can't be parsed, check if it's a direct match
+                    if target_emotions == emotion_target:
+                        filtered_strategies.append(strategy)
+                    continue
+            
+            # Check if emotion is in the list
+            if isinstance(target_emotions, list) and emotion_target in target_emotions:
+                filtered_strategies.append(strategy)
+        
+        strategies_list = filtered_strategies
+    
     # Apply gentle mode restrictions
     if getattr(request.user, 'gentle_mode', False):
-        strategies = strategies.filter(difficulty_level__lte=3)
+        strategies_list = [s for s in strategies_list if s.difficulty_level <= 3]
     
     # Pagination
-    paginator = Paginator(strategies, 12)
+    paginator = Paginator(strategies_list, 12)
     page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    
+    try:
+        page_obj = paginator.get_page(page_number)
+    except:
+        # If there's an error (like empty page), show first page
+        page_obj = paginator.get_page(1)
     
     context = {
         'page_obj': page_obj,
@@ -390,27 +422,110 @@ def coping_strategy_detail(request, pk):
 
 @login_required
 def get_recommendations(request):
-    """Get coping strategy recommendations based on current state"""
+    """Get coping strategy recommendations based on current state - SQLite compatible"""
     if request.method == 'POST':
         form = StrategyRecommendationForm(request.POST)
         if form.is_valid():
-            recommendations = form.get_recommendations()
-            
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                serialized = CopingStrategySerializer(
-                    recommendations, 
-                    many=True,
-                    context={'request': request}
+            try:
+                # Get form data
+                emotion = form.cleaned_data['emotion']
+                intensity = form.cleaned_data['intensity']
+                time_available = form.cleaned_data['time_available']
+                prefer_coding = form.cleaned_data['prefer_coding']
+                
+                # Query strategies - FIXED: No more target_emotions__contains
+                strategies = CopingStrategy.objects.filter(
+                    is_active=True,
+                    estimated_minutes__lte=time_available
                 )
-                return JsonResponse({
-                    'success': True,
-                    'recommendations': serialized.data
-                })
-            
-            return render(request, 'therapy/recommendations.html', {
-                'recommendations': recommendations,
-                'form_data': form.cleaned_data,
-            })
+                
+                if prefer_coding:
+                    strategies = strategies.filter(coding_integration=True)
+                
+                # SQLite compatible filtering for target_emotions
+                filtered_strategies = []
+                for strategy in strategies:
+                    target_emotions = strategy.target_emotions
+                    
+                    # Handle different formats for target_emotions
+                    if isinstance(target_emotions, str):
+                        try:
+                            import json
+                            target_emotions = json.loads(target_emotions)
+                        except:
+                            # If it can't be parsed, skip this strategy
+                            continue
+                    
+                    # Check if emotion is in target_emotions list
+                    if isinstance(target_emotions, list) and emotion in target_emotions:
+                        filtered_strategies.append(strategy)
+                
+                strategies = filtered_strategies
+                
+                # Filter by intensity
+                if intensity >= 7:
+                    strategies = [s for s in strategies if s.difficulty_level <= 2]
+                elif intensity >= 5:
+                    strategies = [s for s in strategies if s.difficulty_level <= 3]
+                
+                # Sort by difficulty and limit to 5
+                strategies = sorted(strategies, key=lambda x: x.difficulty_level)[:5]
+                
+                # If no strategies found with emotion filter, fall back to some general ones
+                if not strategies:
+                    # Get some general strategies
+                    strategies = CopingStrategy.objects.filter(
+                        is_active=True,
+                        estimated_minutes__lte=time_available
+                    )
+                    
+                    if prefer_coding:
+                        strategies = strategies.filter(coding_integration=True)
+                    
+                    # Apply intensity filters
+                    if intensity >= 7:
+                        strategies = [s for s in strategies if s.difficulty_level <= 2]
+                    elif intensity >= 5:
+                        strategies = [s for s in strategies if s.difficulty_level <= 3]
+                    
+                    strategies = list(strategies)[:5]
+                
+                # Check for AJAX request
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    try:
+                        serialized = CopingStrategySerializer(
+                            strategies, 
+                            many=True,
+                            context={'request': request}
+                        )
+                        return JsonResponse({
+                            'success': True,
+                            'recommendations': serialized.data
+                        })
+                    except Exception as e:
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Failed to serialize data'
+                        })
+                
+                # Regular HTML response
+                context = {
+                    'recommendations': strategies,
+                    'form_data': form.cleaned_data,
+                    'emotion_options': EmotionalCheckIn.PrimaryEmotion.choices,
+                }
+                
+                return render(request, 'therapy/recommendations.html', context)
+                
+            except Exception as e:
+                # Log the error
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'Error in get_recommendations: {e}', exc_info=True)
+                
+                # Show error to user
+                messages.error(request, f'Error getting recommendations: {str(e)}')
+                return redirect('therapy:get_recommendations')
     else:
         form = StrategyRecommendationForm()
     

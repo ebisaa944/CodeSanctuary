@@ -1,0 +1,169 @@
+<!-- learning/templates/learning/base.html -->
+{% extends 'therapy/base.html' %}
+{% load static %}
+{% load learning_filters %}  <!-- Add this if using emotional filters -->
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'learning/static/css/style.css' %}">
+{% endblock %}
+
+{% block navigation %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'learning:dashboard' %}">
+            <i class="fas fa-graduation-cap me-2"></i>Therapeutic Learning
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#learningNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="learningNav">
+            <ul class="navbar-nav me-auto">
+                <!-- Main Learning Navigation -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                       href="{% url 'learning:dashboard' %}">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'paths' %}active{% endif %}" 
+                       href="{% url 'learning:paths' %}">
+                        <i class="fas fa-road"></i> Learning Paths
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'progress_report' %}active{% endif %}" 
+                       href="{% url 'learning:progress_report' %}">
+                        <i class="fas fa-chart-line"></i> Progress Report
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-code"></i> Quick Activities
+                    </a>
+                    <ul class="dropdown-menu" id="quick-activities-dropdown">
+                        <!-- Will be populated by JavaScript -->
+                        <li><a class="dropdown-item" href="#">Loading...</a></li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <!-- Cross-App Navigation -->
+            <ul class="navbar-nav">
+                <!-- Therapy Dashboard Link -->
+                <li class="nav-item">
+                    <a class="nav-link text-light" 
+                       href="{% url 'therapy:dashboard' %}">
+                        <i class="fas fa-heartbeat me-1"></i>
+                        <span class="d-none d-lg-inline">Therapy Dashboard</span>
+                        <span class="d-inline d-lg-none">Therapy</span>
+                    </a>
+                </li>
+                
+                <!-- Optional: Other app links -->
+                <li class="nav-item">
+                    <a class="nav-link text-light" 
+                       href="{% url 'social:dashboard' %}">
+                        <i class="fas fa-users me-1"></i>
+                        <span class="d-none d-lg-inline">Community</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- User Menu -->
+            <div class="navbar-nav">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle"></i> {{ user.username }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'users:profile' %}">
+                            <i class="fas fa-user"></i> Profile
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'users:emotional_state' %}">
+                            <i class="fas fa-heart"></i> Emotional State
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'therapy:dashboard' %}">
+                            <i class="fas fa-heartbeat me-2"></i> Therapy Dashboard
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'logout' %}">
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+<div class="container mt-4">
+    <!-- Emotional State Banner -->
+    {% if user.emotional_profile %}
+    <div class="alert alert-{{ user.emotional_profile|get_emotional_alert_class }} mb-3" role="alert">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-{{ user.emotional_profile|get_emotional_icon }} me-2"></i>
+                <strong>Current State:</strong> {{ user.emotional_profile|title }}
+                {% if user.current_stress_level %}
+                <span class="ms-3">Stress Level: {{ user.current_stress_level }}/10</span>
+                {% endif %}
+            </div>
+            <a href="{% url 'users:emotional_state' %}" class="btn btn-sm btn-outline-{{ user.emotional_profile|get_emotional_alert_class }}">
+                Update
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Therapeutic Guidance -->
+    <div class="alert alert-info mb-3" role="alert">
+        <div class="d-flex">
+            <i class="fas fa-hands-helping me-3 fa-2x"></i>
+            <div>
+                <h6 class="alert-heading">Therapeutic Learning Reminder</h6>
+                <p class="mb-0">Progress at your own pace. Every small step is valuable. Take breaks when needed.</p>
+            </div>
+        </div>
+    </div>
+    
+    {% block content %}{% endblock %}
+</div>
+
+{% block extra_js %}
+<script>
+// Load quick activities
+$(document).ready(function() {
+    $.ajax({
+        url: "{% url 'learning:api_recommendations' %}",
+        method: 'GET',
+        success: function(response) {
+            const dropdown = $('#quick-activities-dropdown');
+            dropdown.empty();
+            
+            if (response.recommendations && response.recommendations.length > 0) {
+                response.recommendations.slice(0, 3).forEach(function(rec) {
+                    dropdown.append(`
+                        <li>
+                            <a class="dropdown-item" href="/learning/activity/${rec.activity.slug}/">
+                                <i class="fas fa-play-circle me-2"></i>
+                                ${rec.activity.title}
+                                <small class="text-muted d-block">${rec.reason}</small>
+                            </a>
+                        </li>
+                    `);
+                });
+                dropdown.append('<li><hr class="dropdown-divider"></li>');
+                dropdown.append('<li><a class="dropdown-item" href="/learning/paths/">View all paths</a></li>');
+            } else {
+                dropdown.append('<li><a class="dropdown-item" href="/learning/paths/">Browse Learning Paths</a></li>');
+            }
+        }
+    });
+});
+</script>
+
+<script src="{% static 'learning/js/main.js' %}"></script>
+{% endblock %}

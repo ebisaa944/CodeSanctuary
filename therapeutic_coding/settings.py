@@ -61,6 +61,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    
+
+
+
     #'users.middleware.TherapeuticMiddleware',
     #'users.middleware.StressAwareMiddleware',
     #'users.middleware.GentleResponseMiddleware',
@@ -150,15 +155,29 @@ STATICFILES_DIRS = [
 
 ]
 
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+
+# Add this line for production static file collection
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# This should be defined ONCE - keep only this STATICFILES_DIRS
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+    BASE_DIR / "therapy/static",
+    BASE_DIR / "users/static",
+    BASE_DIR / "learning/static",   
+    BASE_DIR / "social/static",
+    BASE_DIR / "chat/static",
+]
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# REST Framework settings
-
-STATICFILES_DIRS = [BASE_DIR / 'static']
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
+# Remove or comment out these duplicate lines:
+# STATICFILES_DIRS = [BASE_DIR / 'static']  # DELETE THIS LINE
+# STATIC_ROOT = BASE_DIR / 'staticfiles'    # DELETE THIS LINE (already defined above)
+# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -198,10 +217,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 
-# Login/Logout URLs
-LOGIN_URL = '/users/login/'
-LOGIN_REDIRECT_URL = '/learning/dashboard/'
-LOGOUT_REDIRECT_URL = '/'
+# Login/Logout URLs.py
+LOGIN_URL = '/login/'  # Should be this, not '/users/login/'
+LOGIN_REDIRECT_URL = '/therapy/'  # Or wherever you want users to go after login
+LOGOUT_REDIRECT_URL = '/login/'  # Where to go after logout
 
 # Email backend (for password reset)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

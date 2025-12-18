@@ -113,6 +113,65 @@ class EmotionalCheckIn(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.get_primary_emotion_display()} ({self.created_at.date()})"
     
+    def clean(self):
+        """Ensure JSON fields are properly formatted before saving"""
+        super().clean()
+        
+        # Ensure all JSON fields are lists, not None
+        if self.secondary_emotions is None:
+            self.secondary_emotions = []
+        elif isinstance(self.secondary_emotions, str):
+            try:
+                self.secondary_emotions = json.loads(self.secondary_emotions)
+            except:
+                self.secondary_emotions = [self.secondary_emotions]
+        
+        if self.physical_symptoms is None:
+            self.physical_symptoms = []
+        elif isinstance(self.physical_symptoms, str):
+            try:
+                self.physical_symptoms = json.loads(self.physical_symptoms)
+            except:
+                self.physical_symptoms = [self.physical_symptoms]
+        
+        if self.context_tags is None:
+            self.context_tags = []
+        elif isinstance(self.context_tags, str):
+            try:
+                self.context_tags = json.loads(self.context_tags)
+            except:
+                # Handle comma-separated string
+                tags = [tag.strip() for tag in self.context_tags.split(',') if tag.strip()]
+                self.context_tags = tags
+        
+        if self.coping_strategies_used is None:
+            self.coping_strategies_used = []
+        elif isinstance(self.coping_strategies_used, str):
+            try:
+                self.coping_strategies_used = json.loads(self.coping_strategies_used)
+            except:
+                # Handle comma-separated string
+                strategies = [s.strip() for s in self.coping_strategies_used.split(',') if s.strip()]
+                self.coping_strategies_used = strategies
+    
+    def save(self, *args, **kwargs):
+        """Override save to ensure JSON fields are never None"""
+        # Ensure all JSON fields have proper defaults
+        if self.secondary_emotions is None:
+            self.secondary_emotions = []
+        
+        if self.physical_symptoms is None:
+            self.physical_symptoms = []
+        
+        if self.context_tags is None:
+            self.context_tags = []
+        
+        if self.coping_strategies_used is None:
+            self.coping_strategies_used = []
+        
+        # Call parent save
+        super().save(*args, **kwargs)
+    
     def get_emotional_pattern(self):
         """Analyze emotional patterns for insights"""
         recent_checkins = EmotionalCheckIn.objects.filter(
@@ -252,6 +311,38 @@ class CopingStrategy(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.get_strategy_type_display()})"
+    
+    def clean(self):
+        """Ensure JSON fields are properly formatted"""
+        super().clean()
+        
+        # Ensure target_emotions is a list
+        if self.target_emotions is None:
+            self.target_emotions = []
+        elif isinstance(self.target_emotions, str):
+            try:
+                self.target_emotions = json.loads(self.target_emotions)
+            except:
+                self.target_emotions = [self.target_emotions]
+        
+        # Ensure instructions is a list
+        if self.instructions is None:
+            self.instructions = []
+        elif isinstance(self.instructions, str):
+            try:
+                self.instructions = json.loads(self.instructions)
+            except:
+                self.instructions = [self.instructions]
+    
+    def save(self, *args, **kwargs):
+        """Override save to ensure JSON fields are never None"""
+        if self.target_emotions is None:
+            self.target_emotions = []
+        
+        if self.instructions is None:
+            self.instructions = []
+        
+        super().save(*args, **kwargs)
     
     def get_recommended_for_user(self, user):
         """Check if this strategy is recommended for a specific user"""

@@ -1,0 +1,356 @@
+<!-- users/templates/users/landing_page.html -->
+{% extends "therapy/base.html" %}
+{% load static %}
+
+{% block title %}Code Sanctuary - Therapeutic Learning Environment{% endblock %}
+
+{% block page_title %}Welcome to Code Sanctuary{% endblock %}
+{% block page_subtitle %}A gentle, therapeutic learning environment{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="row align-items-center py-5">
+    <div class="col-lg-6">
+        <h1 class="display-4 fw-bold mb-4">
+            Welcome to <span class="text-primary">Code Sanctuary</span>
+        </h1>
+        <p class="lead mb-4">
+            A gentle, therapeutic learning environment designed to help you learn programming 
+            at your own pace while caring for your mental well-being.
+        </p>
+        <div class="d-flex flex-wrap gap-3 mb-4">
+            {% if user.is_authenticated %}
+            <a href="{% url 'therapy:dashboard' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+            </a>
+            <a href="{% url 'learning:dashboard' %}" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-graduation-cap me-2"></i>Learning Dashboard
+            </a>
+            {% else %}
+            <a href="{% url 'users:register' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-seedling me-2"></i>Start Your Journey
+            </a>
+            <!-- FIXED: Changed from 'login' to 'users:login' -->
+            <a href="{% url 'users:login' %}" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </a>
+            {% endif %}
+        </div>
+        <div class="d-flex align-items-center text-muted">
+            <i class="fas fa-shield-alt me-2 text-success"></i>
+            <small>A safe space for learning and growth</small>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="text-center">
+            <div class="therapeutic-icon-large mb-4">
+                <div class="rounded-circle bg-primary p-4 d-inline-block mb-3">
+                    <i class="fas fa-heart fa-4x text-white"></i>
+                </div>
+                <h4 class="text-muted mb-3">Where Code Meets Compassion</h4>
+                <div class="row mt-4">
+                    <div class="col-4">
+                        <div class="text-center">
+                            <i class="fas fa-brain fa-2x text-primary mb-2"></i>
+                            <p class="small mb-0">Mindful</p>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center">
+                            <i class="fas fa-hands-helping fa-2x text-success mb-2"></i>
+                            <p class="small mb-0">Supportive</p>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-center">
+                            <i class="fas fa-user-graduate fa-2x text-info mb-2"></i>
+                            <p class="small mb-0">Educational</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<section id="features" class="py-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h2 class="fw-bold mb-3">Why Code Sanctuary?</h2>
+            <p class="text-muted">We believe learning should be gentle, supportive, and empowering</p>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 therapeutic-card">
+                <div class="card-body text-center p-4">
+                    <div class="therapeutic-icon mb-3">
+                        <i class="fas fa-brain fa-2x text-white"></i>
+                    </div>
+                    <h4 class="card-title">Mindful Learning</h4>
+                    <p class="card-text">
+                        Learn at your own pace with activities tailored to your emotional state 
+                        and energy levels. No pressure, just progress.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 therapeutic-card">
+                <div class="card-body text-center p-4">
+                    <div class="therapeutic-icon mb-3">
+                        <i class="fas fa-hands-helping fa-2x text-white"></i>
+                    </div>
+                    <h4 class="card-title">Therapeutic Support</h4>
+                    <p class="card-text">
+                        Access coping strategies and therapeutic guidance when learning feels 
+                        challenging or overwhelming.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 therapeutic-card">
+                <div class="card-body text-center p-4">
+                    <div class="therapeutic-icon mb-3">
+                        <i class="fas fa-chart-line fa-2x text-white"></i>
+                    </div>
+                    <h4 class="card-title">Gentle Progress</h4>
+                    <p class="card-text">
+                        Track your journey with a compassionate system that celebrates 
+                        every small step forward, not just major milestones.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section id="how-it-works" class="py-5 bg-light rounded-3">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h2 class="fw-bold mb-3">How It Works</h2>
+            <p class="text-muted">A simple, supportive process for therapeutic learning</p>
+        </div>
+        
+        <div class="col-md-3 text-center mb-4">
+            <div class="step-number mb-3">
+                <span class="badge bg-primary rounded-circle p-3">1</span>
+            </div>
+            <h5>Check In</h5>
+            <p class="small text-muted">
+                Share how you're feeling emotionally today
+            </p>
+        </div>
+        
+        <div class="col-md-3 text-center mb-4">
+            <div class="step-number mb-3">
+                <span class="badge bg-primary rounded-circle p-3">2</span>
+            </div>
+            <h5>Get Recommendations</h5>
+            <p class="small text-muted">
+                Receive gentle learning suggestions based on your state
+            </p>
+        </div>
+        
+        <div class="col-md-3 text-center mb-4">
+            <div class="step-number mb-3">
+                <span class="badge bg-primary rounded-circle p-3">3</span>
+            </div>
+            <h5>Learn Gently</h5>
+            <p class="small text-muted">
+                Engage with activities at your own comfortable pace
+            </p>
+        </div>
+        
+        <div class="col-md-3 text-center mb-4">
+            <div class="step-number mb-3">
+                <span class="badge bg-primary rounded-circle p-3">4</span>
+            </div>
+            <h5>Reflect & Grow</h5>
+            <p class="small text-muted">
+                Journal your experience and see your progress over time
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="py-5">
+    <div class="row align-items-center">
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <h2 class="fw-bold mb-4">Our Philosophy</h2>
+            <p class="lead mb-4">
+                We believe that learning to code shouldn't come at the expense of your mental health.
+                Code Sanctuary is built on the principles of compassionate pedagogy and therapeutic education.
+            </p>
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-check-circle text-success me-3 fa-lg"></i>
+                <span>No toxic productivity culture</span>
+            </div>
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-check-circle text-success me-3 fa-lg"></i>
+                <span>Respect for your emotional state</span>
+            </div>
+            <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-check-circle text-success me-3 fa-lg"></i>
+                <span>Celebration of small victories</span>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card therapeutic-card">
+                <div class="card-body p-4">
+                    <h4 class="card-title mb-4">
+                        <i class="fas fa-quote-left text-primary me-2"></i>
+                        Testimonial
+                    </h4>
+                    <blockquote class="blockquote">
+                        <p class="mb-4">
+                            "As someone with anxiety, traditional coding platforms felt overwhelming. 
+                            Code Sanctuary allowed me to learn at my pace without pressure. 
+                            The emotional check-ins made all the difference."
+                        </p>
+                        <footer class="blockquote-footer">
+                            Sarah M., <cite title="Source Title">Beginner Developer</cite>
+                        </footer>
+                    </blockquote>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="py-5 bg-primary text-white rounded-3">
+    <div class="row text-center">
+        <div class="col-lg-8 mx-auto">
+            <h2 class="fw-bold mb-4">Ready to Learn Differently?</h2>
+            <p class="lead mb-4">
+                Join a community that understands that your mental well-being matters as much as your code.
+            </p>
+            {% if user.is_authenticated %}
+            <a href="{% url 'therapy:dashboard' %}" class="btn btn-light btn-lg">
+                Continue Your Journey <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+            {% else %}
+            <a href="{% url 'users:register' %}" class="btn btn-light btn-lg">
+                Create Your Free Account <i class="fas fa-user-plus ms-2"></i>
+            </a>
+            <p class="small mt-3">
+                <!-- FIXED: Changed from 'login' to 'users:login' -->
+                Already have an account? <a href="{% url 'users:login' %}" class="text-white fw-bold">Sign in here</a>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<style>
+/* Landing page specific styles */
+.therapeutic-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), #339af0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+}
+
+.therapeutic-icon-large .rounded-circle {
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.step-number .badge {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* Smooth scroll for anchor links */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2.5rem;
+    }
+    
+    .lead {
+        font-size: 1.1rem;
+    }
+}
+</style>
+
+<script>
+// Smooth scrolling for anchor links
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is coming from anchor link
+    if (window.location.hash) {
+        setTimeout(function() {
+            const element = document.querySelector(window.location.hash);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 100);
+    }
+    
+    // Add click handlers for navigation links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href === '#' || href === '') return;
+            
+            const targetElement = document.querySelector(href);
+            if (targetElement) {
+                e.preventDefault();
+                targetElement.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Update URL without page reload
+                history.pushState(null, null, href);
+            }
+        });
+    });
+    
+    // Highlight current section in view
+    function highlightCurrentSection() {
+        const sections = document.querySelectorAll('section[id]');
+        const scrollPosition = window.scrollY + 100;
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.clientHeight;
+            const sectionId = section.getAttribute('id');
+            
+            if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                document.querySelectorAll('a[href^="#"]').forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === `#${sectionId}`) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+        });
+    }
+    
+    window.addEventListener('scroll', highlightCurrentSection);
+});
+</script>
+{% endblock %}

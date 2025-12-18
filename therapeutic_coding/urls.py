@@ -16,16 +16,28 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+# from rest_framework.routers import DefaultRouter
 from django.conf import settings
 from django.conf.urls.static import static
+from users.views import landing_page  # Import the landing page view
+
+
 
 urlpatterns = [
+      # Root URL now goes to users landing page
+    path('', landing_page, name='landing_page'),
+    
+    # Admin
     path('admin/', admin.site.urls),
-    path('', include('users.urls', namespace='users')),
-    path('therapy/', include('therapy.urls', namespace='therapy')),
-    path('learning/', include('learning.urls', namespace='learning')),
-    path('social/', include('social.urls', namespace='social')),
-    path('chat/', include('chat.urls', namespace='chat')),
+    
+    # Users app URLs (including login/register)
+    path('', include('users.urls')),  # This includes the landing page
+    
+    # Other app URLs
+    path('therapy/', include('therapy.urls')),
+    path('learning/', include('learning.urls')),
+    path('social/', include('social.urls')),
+    path('chat/', include('chat.urls')),
 ]
 
 if settings.DEBUG:

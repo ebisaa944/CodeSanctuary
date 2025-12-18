@@ -1,0 +1,714 @@
+<!-- learning/templates/learning/activity_detail.html -->
+{% extends 'learning/base.html' %}
+{% load static %}
+{% load learning_filters %}
+
+{% block title %}{{ activity.title|default:"Activity" }}{% endblock %}
+{% block page_title %}{{ activity.title|default:"Activity" }}{% endblock %}
+{% block page_subtitle %}{{ activity.short_description|default:"" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .code-editor {
+        height: 300px;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+    
+    .therapeutic-note {
+        border-left: 4px solid #6f42c1;
+        padding-left: 1rem;
+        margin: 1rem 0;
+        font-style: italic;
+    }
+    
+    .star-rating .fas {
+        color: #ffc107;
+        cursor: pointer;
+        font-size: 1.5rem;
+    }
+    
+    .star-rating .far {
+        cursor: pointer;
+        font-size: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Activity Content -->
+    <div class="col-lg-8">
+        <!-- Therapeutic Warning -->
+        {% if not is_suitable %}
+        <div class="alert alert-warning mb-4">
+            <div class="d-flex">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                    <h6 class="alert-heading">Therapeutic Consideration</h6>
+                    <p class="mb-0">{{ suitability_message|default:"This activity may be challenging for your current state. Consider taking it gently." }}</p>
+                    <p class="mb-0 mt-2">
+                        <strong>Suggestions:</strong>
+                        <a href="#" class="btn btn-sm btn-outline-warning ms-2" onclick="showNotification('Gentle recommendations coming soon!', 'info')">
+                            Get a gentler recommendation
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-info ms-2" onclick="showNotification('Coping strategies coming soon!', 'info')">
+                            Browse coping strategies
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Progress Status -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    {% if progress.status == 'completed' %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-check-circle me-1"></i> Completed
+                    </span>
+                    {% elif progress.status == 'in_progress' %}
+                    <span class="badge bg-warning">
+                        <i class="fas fa-spinner me-1"></i> In Progress
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary">
+                        <i class="fas fa-flag me-1"></i> Not Started
+                    </span>
+                    {% endif %}
+                    
+                    <span class="badge bg-{{ activity.therapeutic_focus|default:'general'|get_emotional_alert_class }} ms-2">
+                        {{ activity.therapeutic_focus|default:"General"|title }}
+                    </span>
+                    
+                    <span class="badge bg-info ms-2">
+                        {{ activity.activity_type|default:"Exercise"|title }}
+                    </span>
+                    
+                    <span class="badge bg-light text-dark ms-2">
+                        <i class="fas fa-signal me-1"></i>Level {{ activity.difficulty_level|default:1 }}
+                    </span>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% if user.is_staff %}
+                        <li>
+                            <a class="dropdown-item" href="/admin/learning/microactivity/{{ activity.id }}/change/">
+                                <i class="fas fa-edit me-2"></i> Edit Activity
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#reportModal">
+                                <i class="fas fa-flag me-2"></i> Report Issue
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Activity Info -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-info-circle me-2"></i>Activity Details</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Estimated Time:</strong> {{ activity.estimated_minutes|default:15 }} minutes</p>
+                            <p><strong>Primary Language:</strong> {{ activity.primary_language|default:"Python"|title }}</p>
+                            {% if activity.tech_stack %}
+                            <p><strong>Tech Stack:</strong> {{ activity.tech_stack|join:", " }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Learning Path:</strong> 
+                                {% if activity.learning_path %}
+                                <a href="{% url 'learning:path_detail' path_id=activity.learning_path.id %}">
+                                    {{ activity.learning_path.name }}
+                                </a>
+                                {% else %}
+                                Standalone Activity
+                                {% endif %}
+                            </p>
+                            <p><strong>Validation Type:</strong> {{ activity.validation_type|default:"Completion"|title }}</p>
+                            <p>
+                                <strong>Features:</strong>
+                                {% if activity.no_time_limit %}<span class="badge bg-success me-1">No Time Limit</span>{% endif %}
+                                {% if activity.infinite_retries %}<span class="badge bg-info me-1">Infinite Retries</span>{% endif %}
+                                {% if activity.skip_allowed %}<span class="badge bg-warning me-1">Skip Allowed</span>{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Learning Objectives -->
+                {% if activity.learning_objectives %}
+                <div class="mb-4">
+                    <h6><i class="fas fa-bullseye me-2"></i>Learning Objectives</h6>
+                    <ul>
+                        {% for objective in activity.learning_objectives %}
+                        <li>{{ objective }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <!-- Full Description -->
+                <div class="mb-4">
+                    <h6><i class="fas fa-book me-2"></i>Description</h6>
+                    <div class="activity-description">
+                        {{ activity.full_description|default:"No description available."|linebreaks }}
+                    </div>
+                </div>
+                
+                <!-- Therapeutic Instructions -->
+                <div class="card therapeutic-card mb-4">
+                    <div class="card-header therapeutic-header">
+                        <h6 class="mb-0"><i class="fas fa-hands-helping me-2"></i>Therapeutic Guidance</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6 class="small text-muted">Before Starting</h6>
+                                <ul class="small">
+                                    <li>Take 3 deep breaths</li>
+                                    <li>Check in with how you feel</li>
+                                    <li>Remember there's no pressure</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="small text-muted">During Activity</h6>
+                                <ul class="small">
+                                    <li>Take breaks as needed</li>
+                                    <li>Be gentle with yourself</li>
+                                    <li>Focus on learning, not perfection</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="small text-muted">After Completion</h6>
+                                <ul class="small">
+                                    <li>Reflect on what you learned</li>
+                                    <li>Acknowledge your effort</li>
+                                    <li>Celebrate progress, not just completion</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="therapeutic-note mt-3">
+                            <h6 class="small text-muted">Affirmations for this activity:</h6>
+                            <p class="mb-0">
+                                "I am learning at my own pace"<br>
+                                "Every attempt is progress"
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Code Editor Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-code me-2"></i>Code Editor</h5>
+            </div>
+            <div class="card-body">
+                <!-- Starter Code -->
+                {% if activity.starter_code %}
+                <div class="mb-3">
+                    <h6><i class="fas fa-play me-2"></i>Starter Code</h6>
+                    <pre class="bg-light p-3 rounded"><code>{{ activity.starter_code|default:"# Write your code here" }}</code></pre>
+                </div>
+                {% endif %}
+                
+                <!-- Code Editor -->
+                <div class="mb-3">
+                    <label class="form-label">Your Code</label>
+                    <div id="code-editor" class="code-editor">{{ activity.starter_code|default:"# Write your code here\n# Be gentle with yourself as you learn" }}</div>
+                    <div class="mt-2 small text-muted">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        This is a learning space - there's no pressure to write perfect code
+                    </div>
+                </div>
+                
+                <!-- Controls -->
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" id="run-code">
+                        <i class="fas fa-play me-2"></i> Run Code
+                    </button>
+                    <button class="btn btn-outline-success" id="submit-activity" 
+                            {% if progress.status == 'completed' %}disabled{% endif %}>
+                        <i class="fas fa-check-circle me-2"></i> Submit Activity
+                    </button>
+                    <button class="btn btn-outline-secondary" id="show-solution">
+                        <i class="fas fa-eye me-2"></i> View Solution
+                    </button>
+                    <button class="btn btn-outline-warning" id="reset-code">
+                        <i class="fas fa-redo me-2"></i> Reset
+                    </button>
+                </div>
+                
+                <!-- Output -->
+                <div class="mt-3" id="output-section" style="display: none;">
+                    <h6><i class="fas fa-terminal me-2"></i>Output</h6>
+                    <div id="code-output" class="bg-dark text-light p-3 rounded">
+                        <!-- Output will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Emotional Reflection -->
+        {% if progress.status != 'completed' %}
+        <div class="card mb-4" id="reflection-section">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-heart me-2"></i>Emotional Reflection</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">How do you feel before starting?</label>
+                            <select class="form-select" id="emotional-state-before">
+                                <option value="">Select...</option>
+                                <option value="calm">😌 Calm</option>
+                                <option value="anxious">😰 Anxious</option>
+                                <option value="excited">😃 Excited</option>
+                                <option value="tired">😴 Tired</option>
+                                <option value="overwhelmed">😵 Overwhelmed</option>
+                                <option value="confident">😊 Confident</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Stress Level (1-10)</label>
+                            <input type="range" class="form-range" id="stress-before" min="1" max="10" value="5">
+                            <div class="d-flex justify-content-between small">
+                                <span>Relaxed</span>
+                                <span id="stress-before-value">5</span>
+                                <span>Stressed</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Confidence Level (1-5)</label>
+                            <div class="star-rating" id="confidence-before">
+                                {% for i in "12345" %}
+                                <i class="far fa-star" data-value="{{ forloop.counter }}"></i>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted">Click stars to rate</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Any thoughts before starting?</label>
+                            <textarea class="form-control" id="reflection-before" rows="3" 
+                                      placeholder="Optional: Write any thoughts, worries, or hopes about this activity..."></textarea>
+                        </div>
+                        
+                        <div class="alert alert-light">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <small>This reflection helps track your therapeutic learning journey. It's private and for your benefit.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Action Panel -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Actions</h6>
+            </div>
+            <div class="card-body">
+                {% if progress.status == 'not_started' %}
+                <button class="btn btn-primary w-100 mb-2" id="start-activity">
+                    <i class="fas fa-play-circle me-2"></i> Start Activity
+                </button>
+                {% elif progress.status == 'in_progress' %}
+                <button class="btn btn-warning w-100 mb-2" id="continue-activity">
+                    <i class="fas fa-spinner me-2"></i> Continue
+                </button>
+                {% else %}
+                <button class="btn btn-success w-100 mb-2" disabled>
+                    <i class="fas fa-check-circle me-2"></i> Completed
+                </button>
+                {% endif %}
+                
+                <div class="d-grid gap-2">
+                    {% if activity.learning_path %}
+                    <a href="{% url 'learning:path_detail' path_id=activity.learning_path.id %}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i> Back to Path
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'learning:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home me-2"></i> Dashboard
+                    </a>
+                    
+                    {% if activity.skip_allowed and progress.status != 'completed' %}
+                    <button class="btn btn-outline-warning" id="skip-activity">
+                        <i class="fas fa-forward me-2"></i> Skip for Now
+                    </button>
+                    {% endif %}
+                    
+                    {% if similar_activities %}
+                    <button class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#similar-activities">
+                        <i class="fas fa-exchange-alt me-2"></i> Similar Activities
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Resources -->
+        {% if activity.video_url or activity.documentation_url or activity.additional_resources %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-external-link-alt me-2"></i>Resources</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% if activity.video_url %}
+                    <a href="{{ activity.video_url }}" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fas fa-video me-2"></i> Video Tutorial
+                    </a>
+                    {% endif %}
+                    
+                    {% if activity.documentation_url %}
+                    <a href="{{ activity.documentation_url }}" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fas fa-book me-2"></i> Documentation
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Coping Strategies -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-life-ring me-2"></i>If You Get Stuck</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        <small>Take a 5-minute break and breathe</small>
+                    </div>
+                    <div class="list-group-item">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        <small>Try explaining the problem out loud</small>
+                    </div>
+                    <div class="list-group-item">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        <small>Focus on understanding, not completing</small>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="#" class="btn btn-sm btn-outline-info w-100" onclick="showNotification('More strategies coming soon!', 'info')">
+                        <i class="fas fa-heart me-2"></i> More Coping Strategies
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Similar Activities (Collapsible) -->
+        {% if similar_activities %}
+        <div class="collapse" id="similar-activities">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Similar Activities</h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for similar in similar_activities|slice:":3" %}
+                        <a href="{% url 'learning:activity_detail' slug=similar.slug %}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1 small">{{ similar.title|default:"Activity" }}</h6>
+                                    <small class="text-muted">{{ similar.short_description|default:""|truncatewords:10 }}</small>
+                                </div>
+                                <span class="badge bg-light text-dark">
+                                    {{ similar.estimated_minutes|default:15 }}m
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Time Tracker -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Time Tracker</h6>
+            </div>
+            <div class="card-body text-center">
+                <div id="timer-display" class="display-4 mb-3">00:00</div>
+                {% if activity.no_time_limit %}
+                <div class="alert alert-success small mb-0">
+                    <i class="fas fa-infinity me-1"></i> No time limit - learn at your own pace
+                </div>
+                {% else %}
+                <p class="small text-muted mb-0">
+                    Suggested time: {{ activity.estimated_minutes|default:15 }} minutes<br>
+                    Take breaks as needed
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="solutionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-eye me-2"></i>Solution</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Remember: Looking at solutions is a valid learning strategy. Understanding is more important than struggling.
+                </div>
+                
+                {% if activity.solution_code %}
+                <pre class="bg-light p-3 rounded"><code>{{ activity.solution_code }}</code></pre>
+                {% else %}
+                <p class="text-muted">No solution provided. Focus on your own learning process.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-flag me-2"></i>Report Issue</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Issue Type</label>
+                    <select class="form-select" id="issue-type">
+                        <option value="technical">Technical Problem</option>
+                        <option value="content">Content Issue</option>
+                        <option value="emotional">Emotional Difficulty</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="issue-description" rows="3" 
+                              placeholder="Please describe the issue..."></textarea>
+                </div>
+                <div class="alert alert-info small">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Your feedback helps improve the therapeutic learning experience for everyone.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitReport()">Submit Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+<script>
+let timerInterval;
+let secondsElapsed = 0;
+let isActivityStarted = false;
+
+// Initialize code editor
+let editor;
+try {
+    editor = ace.edit("code-editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/python");
+    editor.setOptions({
+        fontSize: "14px",
+        showPrintMargin: false,
+        wrap: true
+    });
+} catch (e) {
+    console.log("Code editor not available, using textarea");
+}
+
+// Timer functions
+function startTimer() {
+    if (!isActivityStarted) {
+        isActivityStarted = true;
+        timerInterval = setInterval(updateTimer, 1000);
+        
+        // Show notification instead of API call
+        showNotification('Activity started! Take your time.', 'success');
+    }
+}
+
+function updateTimer() {
+    secondsElapsed++;
+    const minutes = Math.floor(secondsElapsed / 60);
+    const seconds = secondsElapsed % 60;
+    $('#timer-display').text(
+        minutes.toString().padStart(2, '0') + ':' + 
+        seconds.toString().padStart(2, '0')
+    );
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+}
+
+// Show therapeutic notification
+function showNotification(message, type = 'info') {
+    const alert = $(`
+        <div class="alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3" style="z-index: 9999">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    $('body').append(alert);
+    
+    setTimeout(() => {
+        alert.alert('close');
+    }, 5000);
+}
+
+// Event Listeners
+$(document).ready(function() {
+    // Start activity button
+    $('#start-activity').click(function() {
+        startTimer();
+        $('#reflection-section').slideUp();
+    });
+    
+    // Continue activity button (same as start)
+    $('#continue-activity').click(function() {
+        startTimer();
+        $('#reflection-section').slideUp();
+    });
+    
+    // Run code button
+    $('#run-code').click(function() {
+        const code = editor ? editor.getValue() : $('#code-editor').text();
+        $('#output-section').show();
+        $('#code-output').html('<div class="text-info">Running code...</div>');
+        
+        // Simulate code execution
+        setTimeout(() => {
+            $('#code-output').html(`
+                <div class="text-success">✓ Code executed successfully!</div>
+                <div class="mt-2">Output: Hello, therapeutic learner!</div>
+                <div class="mt-2 small text-muted">This is a simulation. In production, code would actually run on a server.</div>
+            `);
+        }, 1000);
+    });
+    
+    // Submit activity button
+    $('#submit-activity').click(function() {
+        if (!confirm('Submit your solution? You can always come back and improve it later.')) {
+            return;
+        }
+        
+        stopTimer();
+        
+        // Show success message
+        showNotification('Activity submitted successfully! Great work!', 'success');
+        
+        // Simulate submission
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    });
+    
+    // Show solution button
+    $('#show-solution').click(function() {
+        $('#solutionModal').modal('show');
+    });
+    
+    // Reset code button
+    $('#reset-code').click(function() {
+        if (confirm('Reset code to starter template?')) {
+            const starterCode = "{{ activity.starter_code|default:'# Write your code here\\n# Be gentle with yourself as you learn'|escapejs }}";
+            if (editor) {
+                editor.setValue(starterCode);
+            } else {
+                $('#code-editor').text(starterCode);
+            }
+        }
+    });
+    
+    // Skip activity button
+    $('#skip-activity').click(function() {
+        if (confirm('Skip this activity for now? You can come back to it later.')) {
+            showNotification('Activity skipped. Remember, it\'s okay to take breaks.', 'info');
+            setTimeout(() => {
+                window.location.href = "{% url 'learning:dashboard' %}";
+            }, 1500);
+        }
+    });
+    
+    // Star rating for confidence
+    $('#confidence-before').on('click', '.fa-star', function() {
+        const value = $(this).data('value');
+        $('#confidence-before .fa-star').each(function(i) {
+            if (i < value) {
+                $(this).removeClass('far').addClass('fas');
+            } else {
+                $(this).removeClass('fas').addClass('far');
+            }
+        });
+    });
+    
+    // Stress slider
+    $('#stress-before').on('input', function() {
+        $('#stress-before-value').text($(this).val());
+    });
+    
+    // If already in progress, show timer
+    {% if progress.status == 'in_progress' %}
+    isActivityStarted = true;
+    secondsElapsed = 300; // Start at 5 minutes for demo
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 1000);
+    {% endif %}
+});
+
+function submitReport() {
+    const issueType = $('#issue-type').val();
+    const description = $('#issue-description').val();
+    
+    // Show notification instead of API call
+    showNotification('Thank you for your feedback! We\'ll review this issue.', 'success');
+    $('#reportModal').modal('hide');
+    
+    // Clear form
+    $('#issue-type').val('technical');
+    $('#issue-description').val('');
+}
+</script>
+{% endblock %}
+{% endblock %}

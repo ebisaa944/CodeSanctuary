@@ -1,95 +1,304 @@
-/* Therapeutic CSS - Gentle, calming design */
+/* ============================================
+   THERAPEUTIC CODING - Main Stylesheet
+   Gentle, calming design for emotional support
+   ============================================ */
 
+/* ========== CSS Variables ========== */
 :root {
-    --primary-color: #5c6bc0;
-    --secondary-color: #42a5f5;
-    --success-color: #66bb6a;
-    --danger-color: #ef5350;
-    --warning-color: #ffca28;
-    --gentle-color: #f8bbd9;
-    --calm-color: #c8e6c9;
-    --focus-color: #bbdefb;
-    --neutral-color: #f5f5f5;
+    /* Primary Colors */
+    --primary-color: #5c6bc0;       /* Calm blue-purple */
+    --primary-light: #8e99f3;
+    --primary-dark: #26418f;
+    
+    /* Secondary Colors */
+    --secondary-color: #42a5f5;     /* Soothing blue */
+    --secondary-light: #80d6ff;
+    --secondary-dark: #0077c2;
+    
+    /* Emotional Colors */
+    --emotion-calm: #66bb6a;        /* Green */
+    --emotion-focused: #42a5f5;     /* Blue */
+    --emotion-hopeful: #ffb74d;     /* Orange */
+    --emotion-anxious: #ef5350;     /* Red */
+    --emotion-overwhelmed: #ab47bc; /* Purple */
+    --emotion-neutral: #bdbdbd;     /* Gray */
+    
+    /* UI Colors */
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --danger-color: #f44336;
+    --info-color: #2196f3;
+    
+    /* Background Colors */
+    --bg-primary: #f8f9fa;
+    --bg-secondary: #e9ecef;
+    --bg-card: #ffffff;
+    --bg-gentle: #fff8e1;
+    --bg-calm: #e8f5e9;
+    
+    /* Text Colors */
+    --text-primary: #212529;
+    --text-secondary: #6c757d;
+    --text-light: #f8f9fa;
+    --text-muted: #adb5bd;
+    
+    /* Border & Shadow */
+    --border-color: #dee2e6;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    --box-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.12);
+    
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.3s ease;
+    --transition-slow: 0.5s ease;
+}
+
+/* ========== Global Styles ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body.therapy-app {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    color: var(--text-primary);
+    line-height: 1.6;
     min-height: 100vh;
+    padding-top: 0; /* Reset for fixed navbar */
 }
 
-/* Navigation */
+/* ========== Typography ========== */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+    color: var(--primary-dark);
+}
+
+.display-4, .display-5, .display-6 {
+    font-weight: 300;
+    line-height: 1.2;
+}
+
+.lead {
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--text-secondary);
+}
+
+/* ========== Navigation ========== */
 .therapy-nav {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(10px);
     border-bottom: 2px solid var(--primary-color);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: var(--box-shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
 }
 
 .navbar-brand {
     font-weight: 600;
     color: var(--primary-color) !important;
+    font-size: 1.25rem;
 }
 
-/* Cards */
-.emotion-card {
-    border-radius: 15px;
+.navbar-brand i {
+    margin-right: var(--spacing-sm);
+}
+
+.nav-link {
+    font-weight: 500;
+    padding: var(--spacing-sm) var(--spacing-md) !important;
+    transition: var(--transition-fast);
+}
+
+.nav-link:hover {
+    background-color: rgba(92, 107, 192, 0.1);
+    border-radius: var(--border-radius);
+}
+
+.nav-link.active {
+    color: var(--primary-color) !important;
+    background-color: rgba(92, 107, 192, 0.15);
+    border-radius: var(--border-radius);
+}
+
+.nav-link i {
+    margin-right: var(--spacing-xs);
+    width: 1.25rem;
+    text-align: center;
+}
+
+/* ========== Cards ========== */
+.card {
     border: none;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    transition: all 0.3s ease;
-    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    transition: var(--transition-medium);
+    background: var(--bg-card);
+    margin-bottom: var(--spacing-lg);
 }
 
-.emotion-card:hover {
-    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+.card:hover {
+    box-shadow: var(--box-shadow-hover);
     transform: translateY(-2px);
 }
 
-/* Buttons */
+.card-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: white;
+    border-bottom: none;
+    border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.card-header h5 {
+    margin: 0;
+    color: white;
+    font-weight: 500;
+}
+
+.card-header h5 i {
+    margin-right: var(--spacing-sm);
+}
+
+.card-body {
+    padding: var(--spacing-lg);
+}
+
+.emotion-card {
+    border-left: 5px solid;
+    transition: var(--transition-medium);
+    height: 100%;
+}
+
+.emotion-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Emotion-specific border colors */
+.emotion-card[style*="border-color: #4CAF50"] { border-color: var(--emotion-calm) !important; }
+.emotion-card[style*="border-color: #2196F3"] { border-color: var(--emotion-focused) !important; }
+.emotion-card[style*="border-color: #9C27B0"] { border-color: var(--emotion-overwhelmed) !important; }
+.emotion-card[style*="border-color: #FF9800"] { border-color: var(--emotion-hopeful) !important; }
+
+/* ========== Buttons ========== */
+.btn {
+    border-radius: 50px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    transition: var(--transition-medium);
+    border: none;
+}
+
+.btn-sm {
+    padding: 0.25rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 2rem;
+    font-size: 1.125rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(92, 107, 192, 0.3);
+}
+
+.btn-outline-primary {
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Emotion buttons */
 .btn-gentle {
-    background: var(--gentle-color);
-    border-color: var(--gentle-color);
-    color: #333;
+    background: var(--bg-gentle);
+    color: var(--text-primary);
+    border: 2px solid #ffecb3;
 }
 
 .btn-calm {
-    background: var(--calm-color);
-    border-color: var(--calm-color);
-    color: #333;
+    background: var(--bg-calm);
+    color: var(--text-primary);
+    border: 2px solid #c8e6c9;
 }
 
 .btn-focus {
-    background: var(--focus-color);
-    border-color: var(--focus-color);
-    color: #333;
+    background: #e3f2fd;
+    color: var(--text-primary);
+    border: 2px solid #bbdefb;
 }
 
-/* Forms */
-.gentle-select {
-    border-radius: 8px;
+/* Quick action buttons */
+.quick-actions .btn {
+    margin: var(--spacing-xs);
+    min-width: 120px;
+}
+
+/* ========== Forms ========== */
+.form-label {
+    font-weight: 500;
+    color: var(--primary-dark);
+    margin-bottom: var(--spacing-xs);
+}
+
+.form-control, .form-select {
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1rem;
+    transition: var(--transition-medium);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(92, 107, 192, 0.25);
+    outline: none;
+}
+
+.gentle-select, .gentle-textarea {
     border: 2px solid #e0e0e0;
-    padding: 10px;
-    transition: border-color 0.3s;
+    border-radius: var(--border-radius);
+    padding: 0.75rem 1rem;
+    transition: var(--transition-medium);
 }
 
-.gentle-select:focus {
+.gentle-select:focus, .gentle-textarea:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 0.2rem rgba(92, 107, 192, 0.25);
 }
 
-.gentle-textarea {
-    border-radius: 8px;
-    border: 2px solid #e0e0e0;
-    resize: vertical;
-    transition: border-color 0.3s;
+.reflection-box {
+    background: linear-gradient(135deg, #fffde7, #f3e5f5);
+    border-left: 4px solid #9c27b0;
+    padding: var(--spacing-md);
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
 }
 
-.gentle-textarea:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(92, 107, 192, 0.25);
-}
-
-/* Intensity Slider */
+/* ========== Sliders ========== */
 .intensity-slider {
     -webkit-appearance: none;
     width: 100%;
@@ -97,6 +306,7 @@ body.therapy-app {
     border-radius: 5px;
     background: linear-gradient(to right, #4CAF50, #FFC107, #F44336);
     outline: none;
+    margin: var(--spacing-sm) 0;
 }
 
 .intensity-slider::-webkit-slider-thumb {
@@ -105,147 +315,16 @@ body.therapy-app {
     height: 24px;
     border-radius: 50%;
     background: white;
-    border: 2px solid #333;
+    border: 2px solid var(--text-primary);
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    box-shadow: var(--box-shadow);
+    transition: var(--transition-medium);
 }
 
-/* Emotion Radio Buttons */
-.emotion-radio {
-    display: none;
+.intensity-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
 }
 
-.emotion-radio + label {
-    display: inline-block;
-    padding: 15px 20px;
-    margin: 5px;
-    border: 2px solid #ddd;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.3s;
-    text-align: center;
-    min-width: 100px;
-    font-size: 1.2em;
-}
-
-.emotion-radio:checked + label {
-    border-color: var(--primary-color);
-    background: var(--focus-color);
-    transform: scale(1.05);
-}
-
-/* Checkboxes */
-.symptom-checkboxes {
-    list-style: none;
-    padding: 0;
-}
-
-.symptom-checkboxes li {
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 8px;
-    background: #f8f9fa;
-    transition: background 0.3s;
-}
-
-.symptom-checkboxes li:hover {
-    background: #e9ecef;
-}
-
-/* Alerts and Messages */
-.alert-gentle {
-    background: var(--gentle-color);
-    border-color: #f8bbd9;
-    color: #333;
-}
-
-.alert-calm {
-    background: var(--calm-color);
-    border-color: #c8e6c9;
-    color: #333;
-}
-
-/* Footer */
-.therapy-footer {
-    background: rgba(255, 255, 255, 0.9);
-    border-top: 2px solid var(--neutral-color);
-    padding: 20px 0;
-    margin-top: 40px;
-}
-
-.emergency-resources {
-    background: #fff3cd;
-    border: 1px solid #ffeaa7;
-    border-radius: 8px;
-    padding: 10px;
-    margin-top: 10px;
-}
-
-/* Gentle Mode */
-.gentle-mode-alert {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(90deg, #f8bbd9, #e1bee7);
-    color: #333;
-    text-align: center;
-    padding: 8px;
-    z-index: 1050;
-    font-weight: 500;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-/* Progress and Meters */
-.progress {
-    height: 20px;
-    border-radius: 10px;
-    background: #e9ecef;
-}
-
-.progress-bar {
-    border-radius: 10px;
-    background: linear-gradient(90deg, var(--success-color), var(--warning-color), var(--danger-color));
-}
-
-/* Tables */
-.table-hover tbody tr:hover {
-    background: rgba(92, 107, 192, 0.05);
-}
-
-/* Animations */
-@keyframes gentlePulse {
-    0% { opacity: 0.7; }
-    50% { opacity: 1; }
-    100% { opacity: 0.7; }
-}
-
-.gentle-pulse {
-    animation: gentlePulse 2s infinite;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .emotion-radio + label {
-        min-width: 80px;
-        padding: 10px 15px;
-        font-size: 1em;
-    }
-    
-    .card {
-        margin-bottom: 15px;
-    }
-}
-
-/* Reflection Box */
-.reflection-box {
-    background: linear-gradient(135deg, #fffde7, #f3e5f5);
-    border-left: 4px solid #9c27b0;
-    padding: 15px;
-    border-radius: 0 8px 8px 0;
-}
-
-/* Quick Checkin */
 .quick-intensity {
     -webkit-appearance: none;
     width: 100%;
@@ -255,13 +334,552 @@ body.therapy-app {
     outline: none;
 }
 
-/* Floating Reminder */
-.floating-reminder {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-    max-width: 300px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+/* ========== Emotion Selection ========== */
+.emotion-radio {
+    display: none;
+}
+
+.emotion-radio + label {
+    display: inline-block;
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin: var(--spacing-xs);
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition-medium);
+    text-align: center;
+    min-width: 100px;
+    font-size: 1.2em;
+}
+
+.emotion-radio:checked + label {
+    border-color: var(--primary-color);
+    background: rgba(92, 107, 192, 0.1);
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(92, 107, 192, 0.2);
+}
+
+.emotion-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing-sm);
+}
+
+.emotion-buttons label {
+    flex: 1;
+    min-width: 80px;
+    max-width: 100px;
+}
+
+/* ========== Checkboxes & Radio ========== */
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.symptom-checkboxes {
+    list-style: none;
+    padding: 0;
+}
+
+.symptom-checkboxes li {
+    margin: var(--spacing-sm) 0;
+    padding: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    background: var(--bg-secondary);
+    transition: var(--transition-fast);
+}
+
+.symptom-checkboxes li:hover {
+    background: var(--border-color);
+}
+
+/* ========== Progress & Meters ========== */
+.progress {
+    height: 20px;
     border-radius: 10px;
+    background: var(--bg-secondary);
+    overflow: hidden;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    background: linear-gradient(90deg, var(--emotion-calm), var(--warning-color), var(--danger-color));
+    transition: width 0.5s ease;
+}
+
+.intensity-meter {
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #4CAF50, #FFC107, #F44336);
+    margin: var(--spacing-xs) 0;
+}
+
+/* ========== Tables ========== */
+.table {
+    background: var(--bg-card);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+}
+
+.table thead th {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: white;
+    border: none;
+    font-weight: 500;
+    padding: var(--spacing-md);
+}
+
+.table tbody tr {
+    transition: var(--transition-fast);
+}
+
+.table tbody tr:hover {
+    background: rgba(92, 107, 192, 0.05);
+}
+
+.table td {
+    padding: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+/* ========== Alerts & Messages ========== */
+.alert {
+    border-radius: var(--border-radius);
+    border: none;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    color: #2e7d32;
+    border-left: 4px solid var(--success-color);
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    color: #1565c0;
+    border-left: 4px solid var(--info-color);
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fff8e1, #ffecb3);
+    color: #f57c00;
+    border-left: 4px solid var(--warning-color);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #ffebee, #ffcdd2);
+    color: #c62828;
+    border-left: 4px solid var(--danger-color);
+}
+
+.alert-gentle {
+    background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+    color: var(--text-primary);
+    border-left: 4px solid #f48fb1;
+}
+
+.alert-calm {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    color: var(--text-primary);
+    border-left: 4px solid #81c784;
+}
+
+.floating-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 300px;
+    box-shadow: var(--box-shadow-hover);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ========== Badges ========== */
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+    border-radius: 50px;
+}
+
+.bg-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light)) !important;
+}
+
+.bg-secondary {
+    background: linear-gradient(135deg, #6c757d, #adb5bd) !important;
+}
+
+.bg-success {
+    background: linear-gradient(135deg, var(--success-color), #66bb6a) !important;
+}
+
+.bg-info {
+    background: linear-gradient(135deg, var(--info-color), #64b5f6) !important;
+}
+
+.bg-warning {
+    background: linear-gradient(135deg, var(--warning-color), #ffb74d) !important;
+}
+
+.bg-danger {
+    background: linear-gradient(135deg, var(--danger-color), #ef5350) !important;
+}
+
+/* ========== List Groups ========== */
+.list-group-item {
+    border: none;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius) !important;
+    margin-bottom: var(--spacing-xs);
+    transition: var(--transition-fast);
+    background: var(--bg-secondary);
+}
+
+.list-group-item:hover {
+    background: var(--border-color);
+    transform: translateX(5px);
+}
+
+.list-group-item-action {
+    color: var(--primary-color);
+}
+
+.list-group-item-action:hover {
+    background: rgba(92, 107, 192, 0.1);
+    color: var(--primary-dark);
+}
+
+/* ========== Strategy Cards ========== */
+.strategy-card {
+    border: 2px solid transparent;
+    transition: var(--transition-medium);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.strategy-card:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-5px);
+}
+
+.strategy-meta {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.strategy-meta i {
+    margin-right: var(--spacing-xs);
+    width: 1rem;
+}
+
+/* ========== Pagination ========== */
+.pagination {
+    margin: var(--spacing-lg) 0;
+}
+
+.page-link {
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    margin: 0 2px;
+    border-radius: var(--border-radius) !important;
+    transition: var(--transition-fast);
+}
+
+.page-link:hover {
+    background: rgba(92, 107, 192, 0.1);
+    color: var(--primary-dark);
+    border-color: var(--primary-color);
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* ========== Footer ========== */
+.therapy-footer {
+    background: rgba(255, 255, 255, 0.9);
+    border-top: 2px solid var(--border-color);
+    padding: var(--spacing-xl) 0;
+    margin-top: var(--spacing-xl);
+}
+
+.emergency-resources {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-sm);
+}
+
+.emergency-resources small {
+    line-height: 1.4;
+}
+
+/* ========== Gentle Mode ========== */
+.gentle-mode-alert {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(90deg, #f8bbd9, #e1bee7);
+    color: var(--text-primary);
+    text-align: center;
+    padding: 0.5rem;
+    z-index: 1050;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    animation: gentlePulse 2s infinite;
+}
+
+@keyframes gentlePulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+.gentle-reminder {
+    background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+    border: none;
+    color: var(--text-primary);
+}
+
+/* ========== Modals ========== */
+.modal-content {
+    border-radius: var(--border-radius);
+    border: none;
+    box-shadow: var(--box-shadow-hover);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: white;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border: none;
+}
+
+.modal-title {
+    color: white;
+    font-weight: 500;
+}
+
+.modal-body {
+    padding: var(--spacing-lg);
+}
+
+/* ========== Timer Display ========== */
+#timerDisplay {
+    font-family: 'Courier New', monospace;
+    font-weight: 300;
+    color: var(--primary-color);
+}
+
+#timerCard {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== Charts ========== */
+canvas {
+    max-width: 100%;
+    height: auto !important;
+}
+
+/* ========== Utility Classes ========== */
+.page-header {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.mt-4 { margin-top: var(--spacing-lg) !important; }
+.mb-4 { margin-bottom: var(--spacing-lg) !important; }
+.pt-4 { padding-top: var(--spacing-lg) !important; }
+.pb-4 { padding-bottom: var(--spacing-lg) !important; }
+
+/* ========== Responsive Design ========== */
+@media (max-width: 768px) {
+    .emotion-radio + label {
+        min-width: 70px;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+    
+    .card {
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .display-4 {
+        font-size: 2.5rem;
+    }
+    
+    .navbar-nav {
+        padding: var(--spacing-sm) 0;
+    }
+    
+    .emotion-buttons label {
+        min-width: 60px;
+        max-width: 70px;
+        font-size: 1.5em;
+    }
+    
+    .quick-actions .btn {
+        min-width: 100px;
+        margin: 2px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .card-body {
+        padding: var(--spacing-md);
+    }
+    
+    .btn {
+        padding: 0.4rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .emotion-buttons {
+        gap: 2px;
+    }
+    
+    .emotion-buttons label {
+        min-width: 50px;
+        max-width: 55px;
+        font-size: 1.2em;
+        padding: 0.5rem;
+    }
+}
+
+/* ========== Print Styles ========== */
+@media print {
+    .therapy-nav,
+    .therapy-footer,
+    .btn,
+    .alert,
+    .floating-notification {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+}
+
+/* ========== Accessibility ========== */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Focus styles for keyboard navigation */
+:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Skip to content link */
+.skip-to-content {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-color);
+    color: white;
+    padding: 8px;
+    z-index: 10000;
+    text-decoration: none;
+}
+
+.skip-to-content:focus {
+    top: 0;
+}
+
+/* ========== Loading States ========== */
+.loading {
+    position: relative;
+    opacity: 0.7;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    margin: -20px 0 0 -20px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========== Custom Scrollbar ========== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
 }

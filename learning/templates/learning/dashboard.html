@@ -1,0 +1,598 @@
+<!-- learning/templates/learning/dashboard.html -->
+{% extends 'learning/base.html' %}
+{% load static %}
+{% load learning_filters %}
+
+{% block title %}Learning Dashboard{% endblock %}
+{% block page_title %}Learning Dashboard{% endblock %}
+{% block page_subtitle %}Your Therapeutic Learning Journey{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Welcome Card -->
+    <div class="col-lg-8">
+        <div class="card mb-4 therapeutic-card">
+            <div class="card-header therapeutic-header">
+                <h5 class="mb-0"><i class="fas fa-home me-2"></i>Welcome back, {{ user.username }}!</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p class="lead">
+                            {% if emotional_state == 'energetic' %}
+                            🌟 You're feeling energetic today! Perfect for tackling something new or challenging.
+                            {% elif emotional_state == 'anxious' %}
+                            🌿 You're feeling anxious. Let's choose something gentle and calming to build confidence.
+                            {% elif emotional_state == 'overwhelmed' %}
+                            🍃 You're feeling overwhelmed. Simple, short activities might work best today.
+                            {% elif emotional_state == 'tired' %}
+                            💤 You're feeling tired. Gentle activities or review might be comforting.
+                            {% elif emotional_state == 'depressed' %}
+                            🌈 You're feeling low energy. Small, achievable activities can help.
+                            {% else %}
+                            🌱 Ready to continue your learning journey at your own pace?
+                            {% endif %}
+                        </p>
+                        
+                        {% if user_plan %}
+                        <div class="alert alert-light mt-3">
+                            <h6><i class="fas fa-calendar-check me-2"></i>Today's Learning Plan</h6>
+                            <ul class="mb-0">
+                                <li>Max difficulty: Level {{ user_plan.max_difficulty }}</li>
+                                <li>Suggested duration: {{ user_plan.max_duration }} minutes</li>
+                                <li>Focus: {{ user_plan.focus|default:"Balanced learning" }}</li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="therapeutic-icon-display mb-3">
+                            {% if emotional_state %}
+                            <i class="fas fa-{{ emotional_state|get_emotional_icon }} fa-4x text-{{ emotional_state|get_emotional_alert_class }}"></i>
+                            {% else %}
+                            <i class="fas fa-user fa-4x text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">Your current emotional state</small>
+                        </div>
+                        <!-- "What I'm ready for" selector - client-side only -->
+                        <div class="mt-3">
+                            <small class="text-muted d-block mb-1">Today I feel ready for:</small>
+                            <div class="btn-group btn-group-sm w-100">
+                                <button class="btn btn-outline-secondary btn-sm" id="ready-gentle">Gentle Review</button>
+                                <button class="btn btn-outline-secondary btn-sm" id="ready-challenge">New Challenge</button>
+                                <button class="btn btn-outline-secondary btn-sm" id="ready-creative">Creative Work</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="col-lg-4">
+        <div class="row">
+            <div class="col-md-6 col-lg-12 mb-3">
+                <div class="card stat-card h-100" 
+                     data-stat-type="activities-completed"
+                     data-user-id="{{ user.id }}">
+                    <div class="card-body text-center">
+                        <div class="stat-number display-6 text-primary">{{ stats.completed }}</div>
+                        <div class="stat-label text-muted">Activities Completed</div>
+                        <div class="stat-progress mt-2">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     aria-label="Progress toward 50 activity goal"
+                                     aria-valuenow="{{ stats.completed }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="50"
+                                     style="width: {% widthratio stats.completed 50 100 %}%"></div>
+                            </div>
+                            <small class="text-muted">Toward 50 activity goal</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-12 mb-3">
+                <div class="card stat-card h-100" 
+                     data-stat-type="streak"
+                     data-user-id="{{ user.id }}">
+                    <div class="card-body text-center">
+                        <div class="stat-number display-6 text-success">{{ stats.streak }} 🔥</div>
+                        <div class="stat-label text-muted">Day Streak</div>
+                        
+                        <!-- Streak Visualization - client-side only -->
+                        {% if stats.streak > 0 %}
+                        <div class="mt-2">
+                            <div class="streak-visualization d-flex justify-content-center gap-1 mb-2" id="streak-visualization">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                            <small class="text-muted d-block">
+                                {% if stats.streak > 7 %}
+                                Last 7 of {{ stats.streak }} days
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                {% if stats.streak > 0 %}
+                                Keep going! Consistency builds resilience.
+                                {% else %}
+                                Start your streak today!
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <a href="{% url 'learning:paths' %}" class="btn btn-primary w-100 h-100 py-3">
+                            <i class="fas fa-hands-helping fa-2x mb-2"></i><br>
+                            Gentle Recommendation
+                            <small class="d-block mt-1">Based on your current state</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'learning:paths' %}" class="btn btn-outline-primary w-100 h-100 py-3">
+                            <i class="fas fa-road fa-2x mb-2"></i><br>
+                            Browse Paths
+                            <small class="d-block mt-1">Structured learning journeys</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{% url 'learning:progress_report' %}" class="btn btn-outline-success w-100 h-100 py-3">
+                            <i class="fas fa-chart-line fa-2x mb-2"></i><br>
+                            View Progress
+                            <small class="d-block mt-1">Track your journey</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex flex-column h-100">
+                            <a href="{% url 'therapy:strategies_list' %}" class="btn btn-outline-info w-100 py-3 mb-2">
+                                <i class="fas fa-heart fa-2x mb-2"></i><br>
+                                Coping Strategies
+                                <small class="d-block mt-1">For when learning feels hard</small>
+                            </a>
+                            <button class="btn btn-outline-secondary w-100 py-2 mt-auto" 
+                                    id="skip-today"
+                                    data-bs-toggle="tooltip" 
+                                    title="It's okay to take breaks sometimes">
+                                <i class="fas fa-umbrella-beach me-1"></i>Take a Break
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recommended Paths -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Recommended For You</h5>
+                <a href="{% url 'learning:paths' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recommended_paths %}
+                <div class="list-group list-group-flush">
+                    {% for path in recommended_paths %}
+                    <div class="list-group-item therapeutic-list-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ path.name }}</h6>
+                                <p class="small text-muted mb-2">{{ path.description|truncatewords:25 }}</p>
+                                <div class="d-flex gap-2 mb-2">
+                                    <span class="badge bg-{{ path.difficulty_level|get_difficulty_color }}">
+                                        {{ path.get_difficulty_level_display }}
+                                    </span>
+                                    <span class="badge bg-secondary">{{ path.target_language|title }}</span>
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-clock me-1"></i>{{ path.estimated_total_hours }}h
+                                    </span>
+                                </div>
+                                <div class="progress therapeutic-progress" style="height: 8px;"
+                                     role="progressbar" 
+                                     aria-label="Progress for {{ path.name }}"
+                                     aria-valuenow="{{ path.user_progress.percentage|default:0 }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    <div class="progress-bar" 
+                                         style="width: {{ path.user_progress.percentage|default:0 }}%"></div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ path.user_progress.completed|default:0 }}/{{ path.user_progress.total|default:1 }} activities
+                                    • {{ path.user_progress.percentage|default:0|floatformat:0 }}% complete
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                <a href="{% url 'learning:path_detail' slug=path.slug %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    {% if path.user_progress.completed > 0 %}Continue{% else %}Start{% endif %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-road fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">No recommended paths yet</h6>
+                    <p class="small text-muted">Complete your emotional profile for personalized recommendations</p>
+                    <a href="{% url 'users:emotional_state' %}" class="btn btn-sm btn-outline-primary">
+                        Update Emotional State
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Activity</h5>
+                <a href="{% url 'learning:progress_report' %}" class="btn btn-sm btn-outline-primary">Full Report</a>
+            </div>
+            <div class="card-body">
+                {% if recent_progress %}
+                <div class="timeline">
+                    {% for progress in recent_progress %}
+                    <div class="timeline-item {% if progress.status == 'completed' %}completed{% else %}in-progress{% endif %}">
+                        <div class="timeline-marker">
+                            {% if progress.status == 'completed' %}
+                            <i class="fas fa-check-circle text-success"></i>
+                            {% else %}
+                            <i class="fas fa-play-circle text-warning"></i>
+                            {% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="mb-1">{{ progress.activity.title }}</h6>
+                                <small class="text-muted">{{ progress.updated_at|timesince }} ago</small>
+                            </div>
+                            <div class="d-flex align-items-center mt-2">
+                                <span class="badge bg-{% if progress.status == 'completed' %}success{% else %}warning{% endif %} me-2">
+                                    {{ progress.get_status_display }}
+                                </span>
+                                
+                                {% if progress.time_spent_seconds %}
+                                <small class="text-muted me-2">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ progress.time_spent_seconds|divide:60|floatformat:0 }}m
+                                </small>
+                                {% endif %}
+                                
+                                {% if progress.self_assessment %}
+                                <div class="star-rating small">
+                                    {% for i in "12345"|make_list %}
+                                    <i class="fas fa-star {% if forloop.counter <= progress.self_assessment %}text-warning{% else %}text-muted{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if progress.reflection_notes %}
+                            <div class="therapeutic-note mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-comment me-1"></i>
+                                    "{{ progress.reflection_notes|truncatewords:15 }}"
+                                </small>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mt-2">
+                                <a href="{% url 'learning:activity_detail' slug=progress.activity.slug %}" 
+                                   class="btn btn-sm btn-outline-primary btn-sm">
+                                    {% if progress.status == 'completed' %}Review{% else %}Continue{% endif %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">No recent activity</h6>
+                    <p class="small text-muted">Start your first learning activity to see progress here</p>
+                    <a href="{% url 'learning:paths' %}" class="btn btn-sm btn-primary">
+                        Start Learning
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Today's Affirmation -->
+<div class="row">
+    <div class="col-12">
+        <div class="card therapeutic-affirmation" id="daily-affirmation">
+            <div class="card-body text-center">
+                <i class="fas fa-quote-left fa-2x text-muted me-3"></i>
+                <span class="lead" id="affirmation-text">
+                    {% if daily_affirmation %}
+                    {{ daily_affirmation }}
+                    {% else %}
+                    Every small step in learning is progress. Be gentle with yourself in the process.
+                    {% endif %}
+                </span>
+                <i class="fas fa-quote-right fa-2x text-muted ms-3"></i>
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-outline-secondary" id="new-affirmation">
+                        <i class="fas fa-redo me-1"></i> New Affirmation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Generate streak visualization
+    function generateStreakVisualization() {
+        var streakDays = {{ stats.streak|default:0 }};
+        var $container = $('#streak-visualization');
+        
+        if (streakDays > 0 && $container.length) {
+            var html = '';
+            var daysToShow = Math.min(streakDays, 7);
+            
+            for (var i = 0; i < daysToShow; i++) {
+                html += '<div class="streak-day" style="width: 12px; height: 12px; border-radius: 50%; background-color: #28a745;" ' +
+                       'title="Streak day ' + (i + 1) + '"></div>';
+            }
+            
+            $container.html(html);
+        }
+    }
+    
+    generateStreakVisualization();
+    
+    // Gentle recommendation button - redirect to paths page
+    $('#gentle-recommendation').click(function(e) {
+        e.preventDefault();
+        var originalHtml = $(this).html();
+        
+        // Show loading state
+        $(this).html('<i class="fas fa-spinner fa-spin me-1"></i> Finding gentle activity...');
+        
+        // For now, just redirect to paths page
+        // You can implement AJAX recommendation later
+        setTimeout(function() {
+            window.location.href = "{% url 'learning:paths' %}";
+        }, 500);
+    });
+    
+    // Skip today functionality - client-side only
+    $('#skip-today').click(function() {
+        if (confirm("Would you like to take a break today? It's okay to rest when you need to.")) {
+            // Store in localStorage
+            var today = new Date().toISOString().split('T')[0];
+            var skippedDays = JSON.parse(localStorage.getItem('skippedDays') || '[]');
+            
+            if (!skippedDays.includes(today)) {
+                skippedDays.push(today);
+                localStorage.setItem('skippedDays', JSON.stringify(skippedDays));
+            }
+            
+            showTherapeuticMessage(
+                "Take good care of yourself today. Come back when you're ready. 💚",
+                "success",
+                5000
+            );
+            
+            // Update button appearance
+            $(this).html('<i class="fas fa-check me-1"></i>Resting Today');
+            $(this).removeClass('btn-outline-secondary').addClass('btn-success');
+            $(this).prop('disabled', true);
+        }
+    });
+    
+    // New affirmation button
+    $('#new-affirmation').click(function() {
+        var $btn = $(this);
+        var originalHtml = $btn.html();
+        
+        $btn.html('<i class="fas fa-spinner fa-spin"></i>');
+        
+        // Simulate API call with client-side affirmations
+        setTimeout(function() {
+            var affirmations = [
+                "Progress is not linear; every effort counts.",
+                "You are capable of learning at your own perfect pace.",
+                "Mistakes are proof that you're trying and learning.",
+                "Your brain is growing stronger with every challenge.",
+                "Rest is an important part of the learning process.",
+                "You don't have to be perfect, you just have to try.",
+                "Small steps forward are still steps forward.",
+                "Your journey is unique and valuable."
+            ];
+            
+            var randomAffirmation = affirmations[Math.floor(Math.random() * affirmations.length)];
+            $('#affirmation-text').fadeOut(300, function() {
+                $(this).text(randomAffirmation).fadeIn(300);
+            });
+            
+            $btn.html(originalHtml);
+            
+            // Save to localStorage
+            localStorage.setItem('lastAffirmation', randomAffirmation);
+            localStorage.setItem('affirmationTimestamp', new Date().toISOString());
+        }, 800);
+    });
+    
+    // "What I'm ready for" selector - client-side only
+    $('[id^="ready-"]').click(function() {
+        var readinessType = $(this).attr('id').replace('ready-', '');
+        var buttonText = $(this).text();
+        
+        // Update all buttons
+        $('[id^="ready-"]').removeClass('btn-primary').addClass('btn-outline-secondary');
+        $(this).removeClass('btn-outline-secondary').addClass('btn-primary');
+        
+        // Store in localStorage
+        localStorage.setItem('userReadiness', readinessType);
+        
+        // Show gentle feedback
+        showTherapeuticMessage(
+            "Noted! We'll keep " + buttonText + " in mind for your recommendations.",
+            "info",
+            2000
+        );
+        
+        // Note: To implement server-side saving, you'll need to:
+        // 1. Create a view function in views.py
+        // 2. Add URL pattern in urls.py
+        // 3. Uncomment and adjust the AJAX call below
+        
+        /*
+        $.ajax({
+            url: "/learning/update-readiness/",  // You'll need to create this endpoint
+            method: 'POST',
+            data: {
+                readiness_type: readinessType,
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                console.log('Readiness preference saved');
+            }
+        });
+        */
+    });
+    
+    // Load saved readiness preference
+    var savedReadiness = localStorage.getItem('userReadiness');
+    if (savedReadiness) {
+        $('#ready-' + savedReadiness).removeClass('btn-outline-secondary').addClass('btn-primary');
+    }
+    
+    // Therapeutic hover effects
+    $('.therapeutic-list-item').hover(
+        function() {
+            $(this).addClass('therapeutic-hover');
+            $(this).css({
+                'transition': 'all 0.3s ease',
+                'transform': 'translateY(-2px)',
+                'box-shadow': '0 4px 12px rgba(0,0,0,0.1)'
+            });
+        },
+        function() {
+            $(this).removeClass('therapeutic-hover');
+            $(this).css({
+                'transform': 'translateY(0)',
+                'box-shadow': 'none'
+            });
+        }
+    );
+    
+    // Helper function for therapeutic messages
+    function showTherapeuticMessage(message, type, duration) {
+        // Remove any existing messages
+        $('.therapeutic-message').remove();
+        
+        var alertClass = 'alert-' + (type || 'info');
+        var $message = $('<div class="alert ' + alertClass + ' therapeutic-message text-center" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1050; min-width: 300px; max-width: 90%; border-radius: 8px; padding: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">' + message + '</div>');
+        
+        $('body').append($message);
+        
+        // Add close button
+        $message.append('<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="position: absolute; right: 10px; top: 10px;"></button>');
+        
+        // Auto-remove after duration
+        setTimeout(function() {
+            $message.fadeOut(500, function() {
+                $(this).remove();
+            });
+        }, duration || 3000);
+    }
+    
+    // Check if user has skipped today already
+    var today = new Date().toISOString().split('T')[0];
+    var skippedDays = JSON.parse(localStorage.getItem('skippedDays') || '[]');
+    if (skippedDays.includes(today)) {
+        $('#skip-today').html('<i class="fas fa-check me-1"></i>Resting Today')
+                       .removeClass('btn-outline-secondary')
+                       .addClass('btn-success')
+                       .prop('disabled', true);
+    }
+});
+</script>
+
+<style>
+/* Additional styles for new features */
+.therapeutic-hover {
+    background-color: #f8f9fa;
+    border-left: 3px solid #4dabf7;
+}
+
+.streak-visualization {
+    margin-bottom: 10px;
+}
+
+.streak-day {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.streak-day:hover {
+    transform: scale(1.3);
+}
+
+.therapeutic-message {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translate(-50%, -20px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+/* Style for readiness buttons when active */
+.btn-primary#ready-gentle,
+.btn-primary#ready-challenge,
+.btn-primary#ready-creative {
+    border-color: #4dabf7;
+}
+</style>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,304 @@
+<!-- learning/templates/learning/paths.html -->
+{% extends 'learning/base.html' %}
+{% load static %}
+{% load learning_filters %}
+
+{% block title %}Learning Paths{% endblock %}
+{% block page_title %}Learning Paths{% endblock %}
+{% block page_subtitle %}Choose Your Therapeutic Journey{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h6>
+            </div>
+            <div class="card-body">
+                <form method="get" id="filter-form">
+                    <!-- Difficulty Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small">Difficulty Level</label>
+                        <div class="list-group list-group-flush">
+                            {% for value, label in difficulties %}
+                            <label class="list-group-item list-group-item-action">
+                                <input class="form-check-input me-2" type="radio" name="difficulty" 
+                                       value="{{ value }}" 
+                                       {% if request.GET.difficulty == value|stringformat:"i" %}checked{% endif %}>
+                                {{ label }}
+                            </label>
+                            {% endfor %}
+                            <label class="list-group-item list-group-item-action">
+                                <input class="form-check-input me-2" type="radio" name="difficulty" 
+                                       value="" {% if not request.GET.difficulty %}checked{% endif %}>
+                                All Levels
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Language Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small">Programming Language</label>
+                        <select class="form-select form-select-sm" name="language">
+                            <option value="">All Languages</option>
+                            {% for value, label in languages %}
+                            <option value="{{ value }}" 
+                                    {% if request.GET.language == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Therapeutic Focus -->
+                    <div class="mb-3">
+                        <label class="form-label small">Recommended For</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="filter-my-profile" 
+                                   name="my_profile" {% if request.GET.my_profile %}checked{% endif %}>
+                            <label class="form-check-label small" for="filter-my-profile">
+                                Match my emotional profile
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-search me-1"></i> Apply Filters
+                        </button>
+                        <a href="{% url 'learning:paths' %}" class="btn btn-outline-secondary btn-sm">
+                            Clear Filters
+                        </a>
+                    </div>
+                </form>
+                
+                <!-- Therapeutic Guidance -->
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6 class="small"><i class="fas fa-hands-helping me-1"></i> Choosing a Path</h6>
+                    <p class="small text-muted mb-0">
+                        Consider your current energy and emotional state. It's okay to start with something gentle and build up gradually.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="small"><i class="fas fa-chart-pie me-1"></i> Path Overview</h6>
+                <div class="small">
+                    <div class="d-flex justify-content-between">
+                        <span>Total Paths:</span>
+                        <span class="fw-bold">{{ paths.count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Started:</span>
+                        <span class="fw-bold">
+                            {{ started_count|default:0 }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Completed:</span>
+                        <span class="fw-bold">
+                            {{ completed_count|default:0 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paths List -->
+    <div class="col-lg-9">
+        <!-- Search and Sort -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="path-search" 
+                                   placeholder="Search learning paths...">
+                        </div>
+                    </div>
+                    <div class="col-md-6 mt-2 mt-md-0">
+                        <div class="d-flex justify-content-end gap-2">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="fas fa-sort me-1"></i> Sort
+                                </button>
+                                <ul class="dropdown-menu">
+                                    {% with current_sort=request.GET.sort %}
+                                    <li><a class="dropdown-item {% if current_sort == 'difficulty' %}active{% endif %}" 
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=difficulty">Difficulty (Low to High)</a></li>
+                                    <li><a class="dropdown-item {% if current_sort == '-difficulty' %}active{% endif %}" 
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=-difficulty">Difficulty (High to Low)</a></li>
+                                    <li><a class="dropdown-item {% if current_sort == 'name' %}active{% endif %}" 
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=name">Name (A-Z)</a></li>
+                                    <li><a class="dropdown-item {% if current_sort == '-name' %}active{% endif %}" 
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=-name">Name (Z-A)</a></li>
+                                    {% endwith %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Paths Grid -->
+        {% if paths %}
+        <div class="row row-cols-1 row-cols-md-2 g-4" id="paths-grid">
+            {% for path in paths %}
+            <div class="col">
+                <div class="card h-100 learning-path-card therapeutic-card">
+                    <div class="card-header therapeutic-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-{{ path.difficulty_level|get_difficulty_color }} me-2">
+                                {% if path.get_difficulty_level_display %}
+                                    {{ path.get_difficulty_level_display }}
+                                {% else %}
+                                    {{ path.difficulty_level|get_difficulty_text }}
+                                {% endif %}
+                            </span>
+                            <span class="badge bg-secondary">{{ path.target_language|title }}</span>
+                        </div>
+                        {% if path.user_progress.percentage > 0 %}
+                        <span class="badge bg-{{ path.user_progress.percentage|get_progress_color }}">
+                            {{ path.user_progress.percentage|floatformat:"0" }}%
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ path.name }}</h5>
+                        <p class="card-text small text-muted">{{ path.description|default:""|truncatechars:150 }}</p>
+                        
+                        <!-- Therapeutic Tags -->
+                        {% if path.recommended_for_profiles %}
+                        <div class="mb-3">
+                            <small class="text-muted">Recommended for:</small>
+                            <div class="mt-1">
+                                {% with profiles=path.recommended_for_profiles|split:"," %}
+                                    {% for profile in profiles|slice:":3" %}
+                                    <span class="badge bg-{{ profile|get_emotional_alert_class }} me-1 mb-1">
+                                        <i class="fas fa-{{ profile|get_emotional_icon }} me-1"></i>
+                                        {{ profile|title }}
+                                    </span>
+                                    {% endfor %}
+                                    {% if profiles|length > 3 %}
+                                    <span class="badge bg-light text-dark">+{{ profiles|length|add:"-3" }} more</span>
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Progress -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Progress</span>
+                                <span>{{ path.user_progress.completed|default:0 }}/{{ path.user_progress.total|default:1 }} activities</span>
+                            </div>
+                            <div class="progress therapeutic-progress" style="height: 6px;">
+                                <div class="progress-bar bg-{{ path.user_progress.percentage|get_progress_color }}" 
+                                     role="progressbar" 
+                                     style="width: {{ path.user_progress.percentage|default:0 }}%"
+                                     aria-valuenow="{{ path.user_progress.percentage|default:0 }}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats -->
+                        <div class="row small text-center mb-3">
+                            <div class="col-4">
+                                <div class="fw-bold">{{ path.estimated_total_hours|default:1 }}h</div>
+                                <div class="text-muted">Duration</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold">{{ path.max_daily_minutes|default:30 }}m</div>
+                                <div class="text-muted">Daily</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold">{{ path.activities.count|default:10 }}</div>
+                                <div class="text-muted">Activities</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                {% if path.user_progress.completed == path.user_progress.total %}
+                                <i class="fas fa-check-circle text-success me-1"></i> Completed
+                                {% elif path.user_progress.completed > 0 %}
+                                <i class="fas fa-spinner text-warning me-1"></i> In Progress
+                                {% else %}
+                                <i class="fas fa-flag text-secondary me-1"></i> Not Started
+                                {% endif %}
+                            </small>
+                            <div>
+                                <a href="{% url 'learning:path_detail' path_id=path.id %}" 
+                                   class="btn btn-sm {% if path.user_progress.completed > 0 %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                                    {% if path.user_progress.completed > 0 %}
+                                    <i class="fas fa-play me-1"></i> Continue
+                                    {% else %}
+                                    <i class="fas fa-play me-1"></i> Start Path
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-road fa-4x text-muted mb-4"></i>
+                <h5 class="text-muted">No Learning Paths Found</h5>
+                <p class="text-muted mb-4">
+                    {% if request.GET.difficulty or request.GET.language or request.GET.my_profile %}
+                    Try adjusting your filters to see more paths.
+                    {% else %}
+                    Learning paths are coming soon!
+                    {% endif %}
+                </p>
+                {% if request.GET.difficulty or request.GET.language or request.GET.my_profile %}
+                <a href="{% url 'learning:paths' %}" class="btn btn-primary">
+                    <i class="fas fa-times me-1"></i> Clear Filters
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Live search functionality
+    $('#path-search').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        $('.learning-path-card').each(function() {
+            const cardText = $(this).text().toLowerCase();
+            if (cardText.includes(searchTerm)) {
+                $(this).closest('.col').show();
+            } else {
+                $(this).closest('.col').hide();
+            }
+        });
+    });
+    
+    // Filter form auto-submit for radio buttons
+    $('input[type="radio"][name="difficulty"]').change(function() {
+        $('#filter-form').submit();
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

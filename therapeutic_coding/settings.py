@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django_extensions',
     'django.contrib.staticfiles',
 
     # Third party apps
@@ -76,7 +77,14 @@ ROOT_URLCONF = 'therapeutic_coding.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'templates',
+            # Add these to match therapy/users pattern:
+            BASE_DIR / 'therapy' / 'templates',
+            BASE_DIR / 'users' / 'templates',
+            BASE_DIR / 'social' / 'templates',  # Add this line
+            BASE_DIR / 'learning' / 'templates',
+            BASE_DIR / 'chat' / 'templates',],  # Add this line
+
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -142,18 +150,18 @@ USE_TZ = True
 # Static files configuration
 
 
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+# # Static files (CSS, JavaScript, Images)
+# STATIC_URL = 'static/'
 
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-    BASE_DIR / "therapy/static",
-    BASE_DIR / "users/static",
-    BASE_DIR / "learning/static",   
-    BASE_DIR / "social/static",
-    BASE_DIR / "chat/static",
+# STATICFILES_DIRS = [
+#     BASE_DIR / "static",
+#     BASE_DIR / "therapy/static",
+#     BASE_DIR / "users/static",
+#     BASE_DIR / "learning/static",   
+#     BASE_DIR / "social/static",
+#     BASE_DIR / "chat/static",
 
-]
+# ]
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'

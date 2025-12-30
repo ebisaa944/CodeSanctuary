@@ -1,0 +1,193 @@
+{% extends 'social/base.html' %}
+
+{% block social_title %}Join Support Circle{% endblock %}
+
+{% block social_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="social-card">
+            <div class="social-card-header text-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Join Support Circle
+                </h3>
+            </div>
+            
+            <div class="card-body">
+                <!-- Circle Info -->
+                {% if circle %}
+                <div class="circle-card mb-4">
+                    <div class="circle-header">
+                        <h4 class="mb-1">{{ circle.name }}</h4>
+                        <small>{{ circle.focus_areas }}</small>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ circle.description }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">
+                                <i class="fas fa-user-friends me-1"></i>
+                                {{ circle.active_members }} members
+                            </span>
+                            {% if not circle.is_public %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-lock me-1"></i> Private Circle
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Join Form -->
+                <form method="post" action="{% url 'circle-join' circle.id %}" id="joinForm">
+                    {% csrf_token %}
+                    
+                    {% if not circle.is_public %}
+                    <div class="mb-4">
+                        <label for="join_code" class="form-label h5">
+                            <i class="fas fa-key me-2"></i>Join Code Required
+                        </label>
+                        <input type="text" class="form-control form-control-lg" 
+                               id="join_code" name="join_code" 
+                               placeholder="Enter join code" required>
+                        <div class="form-text">
+                            This is a private circle. You need an invitation code to join.
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Therapeutic Agreement -->
+                    <div class="mb-4">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-hands-helping me-2"></i>Circle Agreement</h5>
+                            <p>By joining this support circle, you agree to:</p>
+                            <ul class="mb-0">
+                                <li>Maintain confidentiality of all discussions</li>
+                                <li>Be respectful and supportive of all members</li>
+                                <li>Use "I" statements when sharing experiences</li>
+                                <li>Not give unsolicited advice</li>
+                                <li>Respect members' boundaries and privacy</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="agree_terms" name="agree_terms" required>
+                            <label class="form-check-label" for="agree_terms">
+                                I agree to the Circle Agreement
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Notification Preferences -->
+                    <div class="mb-4">
+                        <h5><i class="fas fa-bell me-2"></i>Notification Preferences</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="new_messages" name="new_messages" checked>
+                                    <label class="form-check-label" for="new_messages">
+                                        New messages in circle
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="meeting_reminders" name="meeting_reminders" checked>
+                                    <label class="form-check-label" for="meeting_reminders">
+                                        Meeting reminders
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="member_joins" name="member_joins">
+                                    <label class="form-check-label" for="member_joins">
+                                        New member notifications
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="weekly_digest" name="weekly_digest" checked>
+                                    <label class="form-check-label" for="weekly_digest">
+                                        Weekly activity digest
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personal Introduction (Optional) -->
+                    <div class="mb-4">
+                        <label for="introduction" class="form-label h5">
+                            <i class="fas fa-user me-2"></i>Introduction (Optional)
+                        </label>
+                        <textarea class="form-control" id="introduction" name="introduction" 
+                                  rows="3" placeholder="Tell the circle a bit about yourself..."></textarea>
+                        <div class="form-text">
+                            This will be shared with circle members when you join.
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% if circle %}{% url 'circle-detail' circle.id %}{% else %}{% url 'circles-list' %}{% endif %}" 
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Join Circle
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Form submission
+    document.getElementById('joinForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+        
+        // Build notification preferences
+        data.notification_preferences = {
+            new_messages: document.getElementById('new_messages').checked,
+            meeting_reminders: document.getElementById('meeting_reminders').checked,
+            member_joins: document.getElementById('member_joins').checked,
+            weekly_digest: document.getElementById('weekly_digest').checked
+        };
+        
+        fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': data.csrfmiddlewaretoken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                showNotification('Successfully joined the circle!', 'success');
+                
+                // Redirect to circle page
+                setTimeout(() => {
+                    window.location.href = "{% url 'circle-detail' circle.id %}";
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to join circle');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'error');
+        });
+    });
+</script>
+{% endblock %}

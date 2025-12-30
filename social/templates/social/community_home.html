@@ -1,0 +1,719 @@
+<!-- social/templates/social/community_home.html -->
+{% extends 'social/base.html' %}
+
+{% block social_title %}Community Home - Therapeutic Social{% endblock %}
+
+{% block social_content %}
+<div class="row">
+    <!-- Left Column: Main Community Feed -->
+    <div class="col-lg-8">
+        <!-- Welcome Card -->
+        <div class="card social-card mb-4">
+            <div class="social-card-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar large me-3">
+                            <i class="fas fa-home fa-2x"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-1">
+                                Welcome to Our Therapeutic Community
+                            </h4>
+                            <p class="text-muted mb-0">
+                                A safe, supportive space for developers to connect, grow, and heal together
+                            </p>
+                        </div>
+                    </div>
+                    {% if community_stats %}
+                    <div class="d-none d-md-block">
+                        <div class="d-flex">
+                            <div class="text-center px-3">
+                                <div class="h4 mb-0 text-primary">{{ community_stats.total_members|default:"0" }}</div>
+                                <small class="text-muted">Members</small>
+                            </div>
+                            <div class="text-center px-3 border-start">
+                                <div class="h4 mb-0 text-success">{{ community_stats.today_interactions|default:"0" }}</div>
+                                <small class="text-muted">Today's Posts</small>
+                            </div>
+                            <div class="text-center px-3 border-start">
+                                <div class="h4 mb-0 text-info">{{ community_stats.active_circles|default:"0" }}</div>
+                                <small class="text-muted">Support Circles</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="therapeutic-message">
+                    <h5><i class="fas fa-heart text-danger me-2"></i>Community Mission</h5>
+                    <p class="mb-3">Our community is built on principles of empathy, support, and growth. Here, you can:</p>
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item bg-transparent">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Share coding challenges and victories
+                        </li>
+                        <li class="list-group-item bg-transparent">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Receive and offer emotional support
+                        </li>
+                        <li class="list-group-item bg-transparent">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Join interest-based support circles
+                        </li>
+                        <li class="list-group-item bg-transparent">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Earn therapeutic achievements for participation
+                        </li>
+                        <li class="list-group-item bg-transparent">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Track your emotional and coding progress
+                        </li>
+                    </ul>
+                    
+                    {% if user.is_authenticated %}
+                    <div class="d-grid gap-2 d-md-flex">
+                        <button class="btn btn-primary me-2" onclick="window.location.href='#create-post'">
+                            <i class="fas fa-plus me-2"></i>Start a Discussion
+                        </button>
+                        <a href="{% url 'social:circles_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-users me-2"></i>Browse Support Circles
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="encouragement-message">
+                        <h5><i class="fas fa-door-open me-2"></i>Join Our Supportive Community</h5>
+                        <p>Create an account to participate in discussions, join support circles, and earn therapeutic achievements.</p>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <a href="{% url 'users:register' %}" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Register
+                            </a>
+                            <a href="{% url 'users:login' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Community Activity -->
+        {% if recent_interactions %}
+        <div class="card social-card mb-5">
+            <div class="social-card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-comments me-2"></i>Recent Community Activity
+                </h4>
+            </div>
+            <div class="card-body">
+                <div id="recent-activity">
+                    {% for interaction in recent_interactions|slice:":5" %}
+                    <div class="activity-item mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="d-flex">
+                            <div class="user-avatar me-3">
+                                {% if interaction.sender and not interaction.anonymous %}
+                                    {{ interaction.sender.username|first|upper }}
+                                {% else %}
+                                    <i class="fas fa-user-secret"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            {% if interaction.sender and not interaction.anonymous %}
+                                                {{ interaction.sender.username }}
+                                            {% else %}
+                                                <span class="text-muted">Anonymous User</span>
+                                            {% endif %}
+                                        </h6>
+                                        <p class="mb-2">{{ interaction.message|truncatechars:150 }}</p>
+                                    </div>
+                                    <span class="badge bg-{{ interaction.interaction_type }} text-capitalize">
+                                        {{ interaction.get_interaction_type_display }}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="far fa-clock me-1"></i>
+                                        {{ interaction.created_at|timesince }} ago
+                                    </small>
+                                    <div>
+                                        <span class="badge bg-light text-dark me-2">
+                                            <i class="fas fa-thumbs-up me-1"></i>
+                                            {{ interaction.likes_count|default:"0" }}
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-reply me-1"></i>
+                                            {{ interaction.replies_count|default:"0" }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% if recent_interactions|length > 5 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'social:interaction_list' %}" class="btn btn-outline-primary btn-sm">
+                        View All Activity
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Featured Community Features -->
+        <div class="row mb-5">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 social-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-users fa-3x text-primary"></i>
+                        </div>
+                        <h4>Support Circles</h4>
+                        <p class="text-muted">Join groups focused on specific topics like anxiety, imposter syndrome, or specific technologies.</p>
+                        <a href="{% url 'social:circles_list' %}" class="btn btn-outline-primary btn-sm">
+                            Explore Circles
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 social-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-trophy fa-3x text-warning"></i>
+                        </div>
+                        <h4>Achievements</h4>
+                        <p class="text-muted">Earn badges for participation, support, and personal growth milestones.</p>
+                        <a href="{% url 'social:achievements_list' %}" class="btn btn-outline-primary btn-sm">
+                            View Achievements
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 social-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-comments fa-3x text-info"></i>
+                        </div>
+                        <h4>Daily Check-ins</h4>
+                        <p class="text-muted">Share how you're feeling and connect with others having similar experiences.</p>
+                        <a href="{% url 'social:interaction_list' %}" class="btn btn-outline-primary btn-sm">
+                            Start Check-in
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 social-card">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-shield-alt fa-3x text-success"></i>
+                        </div>
+                        <h4>Safe Space</h4>
+                        <p class="text-muted">Our community is moderated to ensure a respectful, supportive environment for all members.</p>
+                        <button class="btn btn-outline-primary btn-sm" onclick="showCommunityGuidelines()">
+                            Community Rules
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Community Guidelines -->
+        <div class="card social-card mb-5">
+            <div class="social-card-header">
+                <h4><i class="fas fa-shield-alt me-2"></i>Community Guidelines</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Do's</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Be kind and empathetic
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Respect different perspectives
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Offer constructive support
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-check text-success me-2"></i>
+                                Maintain confidentiality
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Don'ts</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-times text-danger me-2"></i>
+                                No harassment or bullying
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-times text-danger me-2"></i>
+                                Avoid giving medical advice
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-times text-danger me-2"></i>
+                                Don't share personal information
+                            </li>
+                            <li class="list-group-item bg-transparent">
+                                <i class="fas fa-times text-danger me-2"></i>
+                                No spam or self-promotion
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Community Stats & Features -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card social-card mb-4">
+            <div class="social-card-header">
+                <h4><i class="fas fa-bolt me-2"></i>Quick Actions</h4>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user.is_authenticated %}
+                    <button class="btn btn-primary mb-2" onclick="window.location.href='#create-post'">
+                        <i class="fas fa-edit me-2"></i>Share Your Thoughts
+                    </button>
+                    <button class="btn btn-outline-primary mb-2" onclick="showComingSoon('Create Circle')">
+                        <i class="fas fa-plus-circle me-2"></i>Create a Circle
+                    </button>
+                    <a href="{% url 'social:achievements_list' %}" class="btn btn-outline-primary mb-2">
+                        <i class="fas fa-trophy me-2"></i>View Achievements
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="showDailyCheckin()">
+                        <i class="fas fa-clipboard-check me-2"></i>Daily Check-in
+                    </button>
+                    {% else %}
+                    <a href="{% url 'users:register' %}" class="btn btn-primary mb-2">
+                        <i class="fas fa-user-plus me-2"></i>Join Community
+                    </a>
+                    <a href="{% url 'users:login' %}" class="btn btn-outline-primary mb-2">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </a>
+                    <a href="{% url 'social:circles_list' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-eye me-2"></i>Browse Public Circles
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Support Circles -->
+        {% if active_circles %}
+        <div class="card social-card mb-4">
+            <div class="social-card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Active Support Circles
+                </h4>
+            </div>
+            <div class="card-body">
+                <div id="active-circles">
+                    {% for circle in active_circles|slice:":3" %}
+                    <div class="circle-item mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="mb-0">{{ circle.name }}</h6>
+                            <span class="badge bg-primary">
+                                {{ circle.active_members|default:"0" }} members
+                            </span>
+                        </div>
+                        <p class="small text-muted mb-2">{{ circle.description|truncatechars:80 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">{{ circle.focus_areas }}</small>
+                            <a href="{% url 'social:circle_detail' pk=circle.id %}" class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </div>
+                    </div>
+                    {% if not forloop.last %}<hr class="my-2">{% endif %}
+                    {% endfor %}
+                </div>
+                {% if active_circles|length > 3 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'social:circles_list' %}" class="btn btn-outline-primary btn-sm">
+                        View All Circles
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Achievements -->
+        {% if recent_achievements %}
+        <div class="card social-card mb-4">
+            <div class="social-card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>Recent Achievements
+                </h4>
+            </div>
+            <div class="card-body">
+                <div id="recent-achievements">
+                    {% for user_achievement in recent_achievements|slice:":3" %}
+                    <div class="achievement-item mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="achievement-badge me-3 {{ user_achievement.achievement.tier }}">
+                                <i class="fas fa-award"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ user_achievement.achievement.name }}</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        {{ user_achievement.user.username }}
+                                    </small>
+                                    <small class="text-muted">
+                                        {{ user_achievement.earned_at|timesince }} ago
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not forloop.last %}<hr class="my-2">{% endif %}
+                    {% endfor %}
+                </div>
+                {% if recent_achievements|length > 3 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'social:achievements_list' %}" class="btn btn-outline-primary btn-sm">
+                        View All Achievements
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Community Resources -->
+        <div class="card social-card">
+            <div class="social-card-header">
+                <h4><i class="fas fa-life-ring me-2"></i>Quick Resources</h4>
+            </div>
+            <div class="card-body">
+                <div class="resource-links">
+                    <a href="#" class="d-block mb-2 text-decoration-none">
+                        <i class="fas fa-book me-2 text-primary"></i>
+                        Community Handbook
+                    </a>
+                    <a href="#" class="d-block mb-2 text-decoration-none">
+                        <i class="fas fa-question-circle me-2 text-primary"></i>
+                        FAQ & Help Center
+                    </a>
+                    <a href="#" class="d-block mb-2 text-decoration-none">
+                        <i class="fas fa-headset me-2 text-primary"></i>
+                        Crisis Support Contacts
+                    </a>
+                    <a href="#" class="d-block mb-2 text-decoration-none">
+                        <i class="fas fa-user-shield me-2 text-primary"></i>
+                        Report a Concern
+                    </a>
+                    <a href="#" class="d-block text-decoration-none">
+                        <i class="fas fa-envelope me-2 text-primary"></i>
+                        Contact Moderators
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Testimonials Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <h3 class="mb-4 text-center">
+            <i class="fas fa-star me-2"></i>What Members Are Saying
+        </h3>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"This community helped me overcome my imposter syndrome. I finally feel like I belong in tech."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <strong>Alex, Frontend Developer</strong>
+                        <span class="text-muted">Joined 6 months ago</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"The support circles gave me a safe space to talk about work anxiety. I've made real friends here."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <strong>Sam, Backend Engineer</strong>
+                        <span class="text-muted">Joined 1 year ago</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="testimonial-card">
+                    <div class="testimonial-content">
+                        <p>"The therapeutic achievements system motivated me to be more active and supportive in the community."</p>
+                    </div>
+                    <div class="testimonial-author">
+                        <strong>Jordan, Full-stack Developer</strong>
+                        <span class="text-muted">Joined 3 months ago</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    .user-avatar.large {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    .badge.bg-encouragement { background-color: #28a745; color: white; }
+    .badge.bg-question { background-color: #17a2b8; color: white; }
+    .badge.bg-share { background-color: #ffc107; color: #212529; }
+    .badge.bg-support { background-color: #dc3545; color: white; }
+    .activity-item {
+        transition: background-color 0.2s ease;
+    }
+    .activity-item:hover {
+        background-color: rgba(0,0,0,0.02);
+        border-radius: 5px;
+        padding: 0 10px;
+        margin: 0 -10px;
+    }
+    .circle-item {
+        padding: 10px;
+        border-radius: 5px;
+        transition: background-color 0.2s ease;
+    }
+    .circle-item:hover {
+        background-color: rgba(111, 66, 193, 0.05);
+    }
+    .achievement-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    .achievement-badge.bronze {
+        background-color: #cd7f32;
+        color: white;
+    }
+    .achievement-badge.silver {
+        background-color: #c0c0c0;
+        color: #333;
+    }
+    .achievement-badge.gold {
+        background-color: #ffd700;
+        color: #333;
+    }
+    .testimonial-card {
+        background: var(--light);
+        border-radius: 10px;
+        padding: 20px;
+        height: 100%;
+        transition: transform 0.3s ease;
+    }
+    .testimonial-card:hover {
+        transform: translateY(-5px);
+    }
+    .testimonial-author {
+        border-top: 1px solid #dee2e6;
+        padding-top: 10px;
+        margin-top: 15px;
+        display: flex;
+        flex-direction: column;
+    }
+    .feature-icon {
+        color: var(--primary);
+        transition: transform 0.3s ease;
+    }
+    .social-card:hover .feature-icon {
+        transform: scale(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Community guidelines modal
+    function showCommunityGuidelines() {
+        const modalHTML = `
+            <div class="modal fade" id="guidelinesModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-shield-alt me-2"></i>Community Guidelines
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <h6>Our Core Principles:</h6>
+                            <ol>
+                                <li><strong>Safety First:</strong> This is a safe space for sharing and healing.</li>
+                                <li><strong>Confidentiality:</strong> What's shared here stays here.</li>
+                                <li><strong>Respect:</strong> Everyone's journey is valid and respected.</li>
+                                <li><strong>Support:</strong> We lift each other up, not tear down.</li>
+                                <li><strong>Growth:</strong> We celebrate progress, no matter how small.</li>
+                            </ol>
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Note:</strong> Our community is moderated 24/7 to ensure these guidelines are followed.
+                            </div>
+                            <p class="mt-3 text-muted">
+                                Violation of these guidelines may result in temporary or permanent removal from the community.
+                            </p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        const modal = new bootstrap.Modal(document.getElementById('guidelinesModal'));
+        modal.show();
+        
+        document.getElementById('guidelinesModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+
+    // Daily check-in function
+    function showDailyCheckin() {
+        const checkinHTML = `
+            <div class="modal fade" id="checkinModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-clipboard-check me-2"></i>Daily Check-in
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">How are you feeling today?</label>
+                                <div class="mood-selector d-flex justify-content-between mb-3">
+                                    <button class="btn btn-outline-primary mood-btn" data-mood="great">😊 Great</button>
+                                    <button class="btn btn-outline-primary mood-btn" data-mood="good">🙂 Good</button>
+                                    <button class="btn btn-outline-primary mood-btn" data-mood="okay">😐 Okay</button>
+                                    <button class="btn btn-outline-primary mood-btn" data-mood="challenged">😟 Challenged</button>
+                                    <button class="btn btn-outline-primary mood-btn" data-mood="anxious">😰 Anxious</button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Anything you'd like to share?</label>
+                                <textarea class="form-control" rows="3" placeholder="Optional - share what's on your mind..."></textarea>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="shareAnonymously">
+                                <label class="form-check-label" for="shareAnonymously">
+                                    Share anonymously
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Skip</button>
+                            <button type="button" class="btn btn-primary" onclick="submitCheckin()">Submit Check-in</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', checkinHTML);
+        const modal = new bootstrap.Modal(document.getElementById('checkinModal'));
+        modal.show();
+        
+        document.querySelectorAll('.mood-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        document.getElementById('checkinModal').addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+
+    function submitCheckin() {
+        const selectedMood = document.querySelector('.mood-btn.active')?.dataset.mood || 'okay';
+        const message = document.querySelector('#checkinModal textarea').value;
+        const anonymous = document.querySelector('#shareAnonymously').checked;
+        
+        showNotification('Thanks for checking in! Your mood has been recorded.', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('checkinModal')).hide();
+        console.log('Check-in submitted:', { mood: selectedMood, message, anonymous });
+    }
+
+    function showAllEvents() {
+        showNotification('Event listing page would open here.', 'info');
+    }
+
+    function showComingSoon(featureName) {
+        showNotification(featureName + ' feature is coming soon!', 'info');
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = `
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

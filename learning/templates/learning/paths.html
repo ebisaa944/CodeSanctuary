@@ -17,6 +17,31 @@
             </div>
             <div class="card-body">
                 <form method="get" id="filter-form">
+                    <!-- Learning Type Filter -->
+                    <div class="mb-3">
+                        <label class="form-label small">Learning Type</label>
+                        <div class="list-group list-group-flush">
+                            <label class="list-group-item list-group-item-action">
+                                <input class="form-check-input me-2" type="radio" name="learning_type" 
+                                       value="internal" 
+                                       {% if not request.GET.learning_type or request.GET.learning_type == 'internal' %}checked{% endif %}>
+                                <i class="fas fa-home me-2 text-primary"></i>Internal Paths
+                            </label>
+                            <label class="list-group-item list-group-item-action">
+                                <input class="form-check-input me-2" type="radio" name="learning_type" 
+                                       value="external" 
+                                       {% if request.GET.learning_type == 'external' %}checked{% endif %}>
+                                <i class="fas fa-external-link-alt me-2 text-success"></i>External Platforms
+                            </label>
+                            <label class="list-group-item list-group-item-action">
+                                <input class="form-check-input me-2" type="radio" name="learning_type" 
+                                       value="all" 
+                                       {% if request.GET.learning_type == 'all' %}checked{% endif %}>
+                                <i class="fas fa-globe me-2 text-info"></i>All Resources
+                            </label>
+                        </div>
+                    </div>
+                    
                     <!-- Difficulty Filter -->
                     <div class="mb-3">
                         <label class="form-label small">Difficulty Level</label>
@@ -89,7 +114,7 @@
                 <h6 class="small"><i class="fas fa-chart-pie me-1"></i> Path Overview</h6>
                 <div class="small">
                     <div class="d-flex justify-content-between">
-                        <span>Total Paths:</span>
+                        <span>Internal Paths:</span>
                         <span class="fw-bold">{{ paths.count }}</span>
                     </div>
                     <div class="d-flex justify-content-between">
@@ -104,6 +129,63 @@
                             {{ completed_count|default:0 }}
                         </span>
                     </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <span>External Resources:</span>
+                        <span class="fw-bold text-success">
+                            {% with total_external=external_courses|length %}
+                                {{ total_external }}+
+                            {% endwith %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- External Platforms Quick Links -->
+        <div class="card mt-3 border-success">
+            <div class="card-header bg-success bg-opacity-10 border-success">
+                <h6 class="mb-0"><i class="fas fa-external-link-alt me-2"></i>External Platforms</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'learning:external_courses' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-globe text-success me-3"></i>
+                            <div>
+                                <div class="fw-bold">Browse All External Courses</div>
+                                <small class="text-muted">FreeCodeCamp, Udemy, Coursera & more</small>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="{% url 'learning:personal_learning_plan' %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-calendar-plus text-primary me-3"></i>
+                            <div>
+                                <div class="fw-bold">My Personal Learning Plan</div>
+                                <small class="text-muted">View your saved external courses</small>
+                            </div>
+                        </div>
+                    </a>
+                    {% for platform in external_platforms|slice:":2" %}
+                    <a href="{% url 'learning:external_courses' %}?platform={{ platform.id }}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex align-items-center">
+                            {% if platform.id == 'freecodecamp' %}
+                            <i class="fab fa-free-code-camp text-danger me-3"></i>
+                            {% elif platform.id == 'udemy' %}
+                            <i class="fas fa-video text-purple me-3"></i>
+                            {% elif platform.id == 'coursera' %}
+                            <i class="fas fa-university text-blue me-3"></i>
+                            {% else %}
+                            <i class="fas fa-external-link-alt me-3"></i>
+                            {% endif %}
+                            <div>
+                                <div class="fw-bold">{{ platform.name }}</div>
+                                <small class="text-muted">{{ platform.description|truncatechars:40 }}</small>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -132,14 +214,35 @@
                                 <ul class="dropdown-menu">
                                     {% with current_sort=request.GET.sort %}
                                     <li><a class="dropdown-item {% if current_sort == 'difficulty' %}active{% endif %}" 
-                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=difficulty">Difficulty (Low to High)</a></li>
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}{% if request.GET.learning_type %}learning_type={{ request.GET.learning_type }}&{% endif %}sort=difficulty">Difficulty (Low to High)</a></li>
                                     <li><a class="dropdown-item {% if current_sort == '-difficulty' %}active{% endif %}" 
-                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=-difficulty">Difficulty (High to Low)</a></li>
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}{% if request.GET.learning_type %}learning_type={{ request.GET.learning_type }}&{% endif %}sort=-difficulty">Difficulty (High to Low)</a></li>
                                     <li><a class="dropdown-item {% if current_sort == 'name' %}active{% endif %}" 
-                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=name">Name (A-Z)</a></li>
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}{% if request.GET.learning_type %}learning_type={{ request.GET.learning_type }}&{% endif %}sort=name">Name (A-Z)</a></li>
                                     <li><a class="dropdown-item {% if current_sort == '-name' %}active{% endif %}" 
-                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}sort=-name">Name (Z-A)</a></li>
+                                           href="?{% if request.GET.difficulty %}difficulty={{ request.GET.difficulty }}&{% endif %}{% if request.GET.language %}language={{ request.GET.language }}&{% endif %}{% if request.GET.my_profile %}my_profile=on&{% endif %}{% if request.GET.learning_type %}learning_type={{ request.GET.learning_type }}&{% endif %}sort=-name">Name (Z-A)</a></li>
                                     {% endwith %}
+                                </ul>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-success btn-sm dropdown-toggle" type="button" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="fas fa-plus me-1"></i> Add External
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'learning:external_courses' %}">
+                                        <i class="fas fa-search me-2"></i>Browse External Courses
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'learning:personal_learning_plan' %}">
+                                        <i class="fas fa-list me-2"></i>My Learning Plan
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    {% for platform in external_platforms %}
+                                    <li><a class="dropdown-item" 
+                                           href="{% url 'learning:external_courses' %}?platform={{ platform.id }}">
+                                        <i class="fas fa-external-link-alt me-2"></i>{{ platform.name }}
+                                    </a></li>
+                                    {% endfor %}
                                 </ul>
                             </div>
                         </div>
@@ -148,8 +251,25 @@
             </div>
         </div>
         
+        <!-- External Learning Banner (if showing external content) -->
+        {% if request.GET.learning_type == 'external' or request.GET.learning_type == 'all' %}
+        <div class="alert alert-success mb-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-external-link-alt fa-2x me-3"></i>
+                <div>
+                    <h6 class="alert-heading mb-1">External Learning Resources Available</h6>
+                    <p class="mb-0">
+                        Browse courses from top platforms like FreeCodeCamp, Udemy, and Coursera. 
+                        These can be added to your Personal Learning Plan.
+                        <a href="{% url 'learning:external_courses' %}" class="alert-link ms-2">Browse all external courses →</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Paths Grid -->
-        {% if paths %}
+        {% if paths or external_courses %}
         <div class="row row-cols-1 row-cols-md-2 g-4" id="paths-grid">
             {% for path in paths %}
             <div class="col">
@@ -253,7 +373,113 @@
                 </div>
             </div>
             {% endfor %}
+            
+            <!-- External Courses (if showing all or external only) -->
+            {% if request.GET.learning_type == 'external' or request.GET.learning_type == 'all' %}
+                {% for course in external_courses %}
+                <div class="col">
+                    <div class="card h-100 learning-path-card external-course-card border-success">
+                        <div class="card-header bg-success bg-opacity-10 border-success d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-success me-2">
+                                    <i class="fas fa-external-link-alt me-1"></i>External
+                                </span>
+                                <span class="badge bg-info">{{ course.platform }}</span>
+                            </div>
+                            {% if course.is_free %}
+                            <span class="badge bg-warning text-dark">Free</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ course.title }}</h5>
+                            <p class="card-text small text-muted">{{ course.description|default:""|truncatechars:150 }}</p>
+                            
+                            <!-- Course Details -->
+                            <div class="mb-3">
+                                <div class="row small g-2">
+                                    <div class="col-6">
+                                        <div class="text-muted">Difficulty:</div>
+                                        <div class="fw-bold">
+                                            <span class="badge bg-{{ course.difficulty|lower }}">
+                                                {{ course.difficulty }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted">Duration:</div>
+                                        <div class="fw-bold">{{ course.estimated_time }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted">Language:</div>
+                                        <div class="fw-bold">{{ course.language|default:"Multiple" }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted">Type:</div>
+                                        <div class="fw-bold">
+                                            {% if course.certificate %}
+                                            <i class="fas fa-certificate text-warning me-1"></i>Certificate
+                                            {% else %}
+                                            Course
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if course.rating or course.students %}
+                            <div class="mb-3">
+                                <div class="row small g-2">
+                                    {% if course.rating %}
+                                    <div class="col-6">
+                                        <div class="text-muted">Rating:</div>
+                                        <div class="fw-bold">
+                                            <i class="fas fa-star text-warning me-1"></i>{{ course.rating }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if course.students %}
+                                    <div class="col-6">
+                                        <div class="text-muted">Students:</div>
+                                        <div class="fw-bold">
+                                            <i class="fas fa-users text-info me-1"></i>{{ course.students }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100">
+                                <a href="{{ course.url }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-external-link-alt me-1"></i> Visit
+                                </a>
+                                <a href="{% url 'learning:external_course_detail' platform_name=course.platform|lower external_id=course.external_id %}" 
+                                   class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-info-circle me-1"></i> Details
+                                </a>
+                                <a href="{% url 'learning:import_external_course' platform_name=course.platform|lower external_id=course.external_id %}" 
+                                   class="btn btn-sm btn-success">
+                                    <i class="fas fa-plus me-1"></i> Add to Plan
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
         </div>
+        
+        <!-- Show More External Courses Link -->
+        {% if request.GET.learning_type == 'all' and external_courses|length > 4 %}
+        <div class="text-center mt-4">
+            <a href="{% url 'learning:external_courses' %}" class="btn btn-success">
+                <i class="fas fa-external-link-alt me-2"></i>View All {{ external_courses|length }} External Courses
+            </a>
+        </div>
+        {% endif %}
         {% else %}
         <!-- Empty State -->
         <div class="card">
@@ -261,17 +487,22 @@
                 <i class="fas fa-road fa-4x text-muted mb-4"></i>
                 <h5 class="text-muted">No Learning Paths Found</h5>
                 <p class="text-muted mb-4">
-                    {% if request.GET.difficulty or request.GET.language or request.GET.my_profile %}
+                    {% if request.GET.difficulty or request.GET.language or request.GET.my_profile or request.GET.learning_type %}
                     Try adjusting your filters to see more paths.
                     {% else %}
                     Learning paths are coming soon!
                     {% endif %}
                 </p>
-                {% if request.GET.difficulty or request.GET.language or request.GET.my_profile %}
-                <a href="{% url 'learning:paths' %}" class="btn btn-primary">
-                    <i class="fas fa-times me-1"></i> Clear Filters
-                </a>
-                {% endif %}
+                <div class="d-flex gap-2 justify-content-center">
+                    {% if request.GET.difficulty or request.GET.language or request.GET.my_profile or request.GET.learning_type %}
+                    <a href="{% url 'learning:paths' %}" class="btn btn-primary">
+                        <i class="fas fa-times me-1"></i> Clear Filters
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'learning:external_courses' %}" class="btn btn-success">
+                        <i class="fas fa-external-link-alt me-1"></i> Browse External Courses
+                    </a>
+                </div>
             </div>
         </div>
         {% endif %}
@@ -284,7 +515,7 @@ $(document).ready(function() {
     // Live search functionality
     $('#path-search').on('input', function() {
         const searchTerm = $(this).val().toLowerCase();
-        $('.learning-path-card').each(function() {
+        $('.learning-path-card, .external-course-card').each(function() {
             const cardText = $(this).text().toLowerCase();
             if (cardText.includes(searchTerm)) {
                 $(this).closest('.col').show();
@@ -295,9 +526,33 @@ $(document).ready(function() {
     });
     
     // Filter form auto-submit for radio buttons
-    $('input[type="radio"][name="difficulty"]').change(function() {
+    $('input[type="radio"][name="difficulty"], input[type="radio"][name="learning_type"]').change(function() {
         $('#filter-form').submit();
     });
+    
+    // Toggle external courses visibility based on learning type
+    const learningType = '{{ request.GET.learning_type|default:"internal" }}';
+    if (learningType === 'external') {
+        $('.learning-path-card').closest('.col').hide();
+        $('.external-course-card').closest('.col').show();
+    } else if (learningType === 'internal') {
+        $('.learning-path-card').closest('.col').show();
+        $('.external-course-card').closest('.col').hide();
+    } else {
+        $('.learning-path-card, .external-course-card').closest('.col').show();
+    }
+    
+    // External course card hover effect
+    $('.external-course-card').hover(
+        function() {
+            $(this).addClass('shadow');
+            $(this).find('.card-header').addClass('bg-success');
+        },
+        function() {
+            $(this).removeClass('shadow');
+            $(this).find('.card-header').removeClass('bg-success');
+        }
+    );
 });
 </script>
 {% endblock %}

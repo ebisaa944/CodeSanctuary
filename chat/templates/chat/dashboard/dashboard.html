@@ -1,0 +1,512 @@
+{% extends "chat/base.html" %}
+{% load static %}
+
+{% block chat_title %}Chat Dashboard | Therapeutic Chat{% endblock %}
+
+{% block chat_page_title %}Therapeutic Chat Dashboard{% endblock %}
+
+{% block chat_page_subtitle %}Welcome to your safe space for healing conversations{% endblock %}
+
+{% block chat_content %}
+<div class="chat-dashboard">
+    <div class="row">
+        <!-- Left Column: Active Rooms -->
+        <div class="col-lg-8">
+            <div class="card therapy-card mb-4">
+                <div class="card-header bg-therapy-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Active Conversations
+                        <span class="badge bg-light text-therapy-primary float-end">{{ active_rooms.count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if active_rooms %}
+                    <div class="chat-rooms-grid">
+                        {% for room in active_rooms %}
+                        <div class="chat-room-card" data-room-id="{{ room.id }}" data-stress-limit="{{ room.max_stress_level }}">
+                            <div class="room-header">
+                                <div class="room-icon">
+                                    {% if room.room_type == 'therapy_session' %}
+                                    <i class="fas fa-heart-circle-check"></i>
+                                    {% elif room.room_type == 'peer_support' %}
+                                    <i class="fas fa-hands-helping"></i>
+                                    {% elif room.room_type == 'learning_group' %}
+                                    <i class="fas fa-graduation-cap"></i>
+                                    {% else %}
+                                    <i class="fas fa-comments"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="room-info">
+                                    <h6 class="room-name">{{ room.name }}</h6>
+                                    <div class="room-meta">
+                                        <span class="badge bg-{% if room.safety_level == 'safe_space' %}success{% elif room.safety_level == 'supportive' %}info{% else %}warning{% endif %}">
+                                            {{ room.get_safety_level_display }}
+                                        </span>
+                                        <small class="text-muted">
+                                            <i class="fas fa-users"></i> {{ room.participant_count }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="room-description">
+                                <p class="small">{{ room.description|truncatechars:100 }}</p>
+                            </div>
+                            
+                            <div class="room-actions">
+                                <a href="{% url 'chat:room_detail' room.id %}" class="btn btn-sm btn-therapy-primary">
+                                    <i class="fas fa-door-open"></i> Enter
+                                </a>
+                                {% if room.mood_tracking_enabled %}
+                                <span class="badge bg-therapy-secondary">
+                                    <i class="fas fa-brain"></i> Mood Tracking
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Stress compatibility indicator -->
+                            <div class="stress-compatibility">
+                                {% if user.current_stress_level <= room.max_stress_level %}
+                                <div class="compatibility-good">
+                                    <i class="fas fa-check-circle"></i> Suitable for your stress level
+                                </div>
+                                {% else %}
+                                <div class="compatibility-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> High stress limit required
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-comments-slash fa-3x text-muted mb-3"></i>
+                        <h5>No Active Conversations</h5>
+                        <p class="text-muted">Join a room to start therapeutic conversations</p>
+                        <a href="{% url 'chat:room_list' %}" class="btn btn-therapy-primary">
+                            <i class="fas fa-search"></i> Find Rooms
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Recent Messages -->
+            <div class="card therapy-card">
+                <div class="card-header bg-therapy-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Therapeutic Messages
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="recent-messages" id="recentMessages">
+                        {% for message in recent_messages %}
+                        <div class="message-preview {% if message.is_vulnerable_share %}vulnerable-share{% endif %}">
+                            <div class="message-header">
+                                <div class="sender-avatar" style="background-color: {{ message.user.avatar_color }};">
+                                    {{ message.user.username|first|upper }}
+                                </div>
+                                <div class="sender-info">
+                                    <strong>{{ message.user.username }}</strong>
+                                    <small class="text-muted">{{ message.created_at|timesince }} ago</small>
+                                </div>
+                                <div class="message-meta">
+                                    {% if message.is_vulnerable_share %}
+                                    <span class="badge bg-therapy-warning">
+                                        <i class="fas fa-shield-heart"></i> Vulnerable
+                                    </span>
+                                    {% endif %}
+                                    {% if message.contains_affirmation %}
+                                    <span class="badge bg-therapy-safe">
+                                        <i class="fas fa-heart"></i> Affirmation
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="message-content">
+                                <p>{{ message.safe_content_preview }}</p>
+                            </div>
+                            <div class="message-actions">
+                                <a href="{% url 'chat:room_detail' message.room.id %}" class="btn btn-sm btn-outline-therapy">
+                                    <i class="fas fa-reply"></i> Respond
+                                </a>
+                                <button class="btn btn-sm btn-outline-therapy reaction-btn" 
+                                        data-message-id="{{ message.id }}">
+                                    <i class="fas fa-heart"></i> Support
+                                </button>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No recent messages to display</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column: Therapeutic Tools -->
+        <div class="col-lg-4">
+            <!-- Therapeutic Stats Card -->
+            <div class="card therapy-card mb-4">
+                <div class="card-header bg-therapy-safe text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Your Therapeutic Engagement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="therapy-stats">
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>{{ stats.total_messages }}</h4>
+                                <p class="small mb-0">Messages Sent</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-icon vulnerable">
+                                <i class="fas fa-shield-heart"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>{{ stats.vulnerable_shares }}</h4>
+                                <p class="small mb-0">Vulnerable Shares</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-icon coping">
+                                <i class="fas fa-hands-helping"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>{{ stats.coping_strategies }}</h4>
+                                <p class="small mb-0">Coping Strategies</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-item">
+                            <div class="stat-icon affirmation">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h4>{{ stats.affirmations }}</h4>
+                                <p class="small mb-0">Affirmations Given</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Therapeutic Engagement Score -->
+                    <div class="engagement-score mt-4">
+                        <h6>Therapeutic Engagement Score</h6>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-therapy-primary" 
+                                 role="progressbar" 
+                                 style="width: {{ stats.engagement_score_percentage }}%"
+                                 aria-valuenow="{{ stats.engagement_score_percentage }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ stats.engagement_score_percentage }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">Based on your therapeutic contributions</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions Card -->
+            <div class="card therapy-card mb-4">
+                <div class="card-header bg-therapy-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="quick-actions-grid">
+                        <a href="{% url 'chat:room_create' %}" class="quick-action-btn">
+                            <div class="action-icon create-room">
+                                <i class="fas fa-plus-circle"></i>
+                            </div>
+                            <span>Create Room</span>
+                        </a>
+                        
+                        <button class="quick-action-btn" data-bs-toggle="modal" data-bs-target="#emotionalCheckinModal">
+                            <div class="action-icon checkin">
+                                <i class="fas fa-heartbeat"></i>
+                            </div>
+                            <span>Check-in</span>
+                        </button>
+                        
+                        <a href="{% url 'chat:notification_center' %}" class="quick-action-btn">
+                            <div class="action-icon notifications">
+                                <i class="fas fa-bell"></i>
+                                {% if unread_notifications_count %}
+                                <span class="notification-dot"></span>
+                                {% endif %}
+                            </div>
+                            <span>Notifications</span>
+                        </a>
+                        
+                        <a href="{% url 'chat:safety_resources' %}" class="quick-action-btn">
+                            <div class="action-icon safety">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <span>Safety</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gentle Reminders -->
+            {% if user.gentle_mode %}
+            <div class="card therapy-card gentle-reminder-card">
+                <div class="card-header bg-therapy-gentle text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-feather me-2"></i>Gentle Reminders
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="gentle-reminders">
+                        <div class="reminder-item">
+                            <i class="fas fa-heart text-therapy-primary"></i>
+                            <p>Remember to take breaks during conversations</p>
+                        </div>
+                        <div class="reminder-item">
+                            <i class="fas fa-wind text-therapy-secondary"></i>
+                            <p>Breathe deeply if conversations feel intense</p>
+                        </div>
+                        <div class="reminder-item">
+                            <i class="fas fa-hand-holding-heart text-therapy-safe"></i>
+                            <p>You can always step away and return later</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Stress Level Suggestions -->
+            <div class="card therapy-card stress-suggestion-card mt-4">
+                <div class="card-header {% if user.current_stress_level >= 7 %}bg-therapy-warning{% elif user.current_stress_level >= 4 %}bg-therapy-secondary{% else %}bg-therapy-safe{% endif %} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-brain me-2"></i>Stress Level: {{ user.current_stress_level }}/10
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if user.current_stress_level >= 7 %}
+                    <div class="alert alert-therapy-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>High Stress Detected</strong>
+                        <p class="small mb-0">Consider joining "Calm Conversations" or taking a break</p>
+                    </div>
+                    {% elif user.current_stress_level >= 4 %}
+                    <div class="alert alert-therapy-info">
+                        <i class="fas fa-balance-scale me-2"></i>
+                        <strong>Moderate Stress</strong>
+                        <p class="small mb-0">You're managing well. Consider joining supportive conversations</p>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-therapy-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Low Stress Level</strong>
+                        <p class="small mb-0">Great self-regulation! You might enjoy growth-focused rooms</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="suggested-rooms">
+                        <h6>Suggested Rooms:</h6>
+                        <div class="list-group">
+                            {% for room in suggested_rooms %}
+                            <a href="{% url 'chat:room_detail' room.id %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ room.name }}</h6>
+                                    <small class="text-muted">{{ room.participant_count }} active</small>
+                                </div>
+                                <p class="mb-1 small">{{ room.safety_level|title }}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Therapeutic Welcome Modal (First time only) -->
+{% if first_chat_visit %}
+<div class="modal fade therapeutic-welcome-modal" id="welcomeModal" tabindex="-1" 
+     aria-labelledby="welcomeModalLabel" aria-hidden="false" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-therapy-primary text-white">
+                <h5 class="modal-title" id="welcomeModalLabel">
+                    <i class="fas fa-heart-circle-check me-2"></i>Welcome to Therapeutic Chat
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div class="welcome-content text-center">
+                    <div class="welcome-icon mb-4">
+                        <i class="fas fa-comments-medical fa-4x text-therapy-primary"></i>
+                    </div>
+                    
+                    <h4 class="mb-3">A Safe Space for Healing Conversations</h4>
+                    
+                    <div class="welcome-features">
+                        <div class="feature-item">
+                            <i class="fas fa-shield-heart text-therapy-safe"></i>
+                            <p>Therapeutic safety features</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-brain text-therapy-secondary"></i>
+                            <p>Emotional tone awareness</p>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-hands-helping text-therapy-primary"></i>
+                            <p>Supportive community</p>
+                        </div>
+                    </div>
+                    
+                    <div class="therapeutic-guidelines mt-4">
+                        <h6>Our Therapeutic Guidelines:</h6>
+                        <ul class="text-start">
+                            <li>Share only what feels safe for you</li>
+                            <li>Use trigger warnings for sensitive topics</li>
+                            <li>Respect different emotional experiences</li>
+                            <li>Take breaks when needed</li>
+                            <li>Practice kindness and compassion</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-therapy-primary btn-lg" data-bs-dismiss="modal">
+                    <i class="fas fa-door-open me-2"></i>Enter Therapeutic Chat
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_footer_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show welcome modal if first visit
+        {% if first_chat_visit %}
+        const welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
+        welcomeModal.show();
+        
+        // Store that user has seen the welcome
+        localStorage.setItem('chatWelcomeSeen', 'true');
+        {% endif %}
+        
+        // Handle reaction buttons
+        document.querySelectorAll('.reaction-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const messageId = this.dataset.messageId;
+                sendTherapeuticReaction(messageId, '❤️');
+            });
+        });
+        
+        // Load more messages on scroll
+        const recentMessages = document.getElementById('recentMessages');
+        if (recentMessages) {
+            let loading = false;
+            
+            recentMessages.addEventListener('scroll', function() {
+                if (!loading && this.scrollTop + this.clientHeight >= this.scrollHeight - 100) {
+                    loadMoreMessages();
+                }
+            });
+        }
+        
+        // Initialize stress-based room filtering
+        initializeStressFiltering();
+    });
+    
+    function sendTherapeuticReaction(messageId, reaction) {
+        fetch(`/chat/api/messages/${messageId}/react/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                reaction_type: reaction,
+                emotional_context: 'Found this supportive'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.detail === 'Reaction removed') {
+                showTherapeuticToast('Reaction removed', 'info');
+            } else {
+                showTherapeuticToast('Support sent! 💖', 'success');
+            }
+        })
+        .catch(error => {
+            showTherapeuticToast('Unable to send reaction', 'error');
+        });
+    }
+    
+    function loadMoreMessages() {
+        // Implementation for infinite scroll
+        console.log('Loading more messages...');
+    }
+    
+    function initializeStressFiltering() {
+        const roomCards = document.querySelectorAll('.chat-room-card');
+        const userStress = {{ user.current_stress_level }};
+        
+        roomCards.forEach(card => {
+            const stressLimit = parseInt(card.dataset.stressLimit);
+            
+            if (userStress > stressLimit) {
+                card.style.opacity = '0.6';
+                card.style.filter = 'grayscale(30%)';
+                card.querySelector('.stress-compatibility').innerHTML = `
+                    <div class="compatibility-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Your stress level is higher than recommended for this room
+                    </div>
+                `;
+            }
+        });
+    }
+    
+    function getCSRFToken() {
+        return document.querySelector('[name=csrf-token]').content;
+    }
+    
+    function showTherapeuticToast(message, type = 'info') {
+        // Simple toast notification
+        const toast = document.createElement('div');
+        toast.className = `therapy-toast toast-${type}`;
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            </div>
+            <div class="toast-message">${message}</div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+</script>
+{% endblock %}

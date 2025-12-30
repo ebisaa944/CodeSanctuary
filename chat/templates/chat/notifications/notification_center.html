@@ -1,0 +1,200 @@
+{% extends "chat/base.html" %}
+{% load static %}
+
+{% block chat_title %}Notifications | Therapeutic Chat{% endblock %}
+
+{% block chat_page_title %}Therapeutic Notifications{% endblock %}
+
+{% block chat_page_subtitle %}Gentle reminders and therapeutic updates{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'chat/css/notifications.css' %}">
+{% endblock %}
+
+{% block chat_content %}
+<div class="notifications-container">
+    <!-- Notification Filters -->
+    <div class="card therapy-card mb-4">
+        <div class="card-body">
+            <div class="notification-filters">
+                <div class="filter-buttons">
+                    <button class="btn btn-sm btn-outline-therapy active" data-filter="all">
+                        All Notifications
+                    </button>
+                    <button class="btn btn-sm btn-outline-therapy" data-filter="unread">
+                        Unread Only
+                    </button>
+                    <button class="btn btn-sm btn-outline-therapy" data-filter="urgent">
+                        Urgent
+                    </button>
+                    <button class="btn btn-sm btn-outline-therapy" data-filter="therapeutic">
+                        Therapeutic
+                    </button>
+                </div>
+                
+                <div class="notification-actions">
+                    <button class="btn btn-sm btn-therapy-primary" id="markAllReadBtn">
+                        <i class="fas fa-check-double me-1"></i> Mark All Read
+                    </button>
+                    <button class="btn btn-sm btn-outline-therapy" id="clearReadBtn">
+                        <i class="fas fa-trash-alt me-1"></i> Clear Read
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notifications List -->
+    <div class="notifications-list" id="notificationsList">
+        {% for notification in notifications %}
+        {% include "chat/components/notification_item.html" with notification=notification %}
+        {% empty %}
+        <div class="no-notifications text-center py-5">
+            <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+            <h4>No notifications</h4>
+            <p class="text-muted">You're all caught up!</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Gentle Notification Settings -->
+    <div class="card therapy-card mt-4">
+        <div class="card-header bg-therapy-gentle text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-feather me-2"></i>Gentle Notification Settings
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="gentleSettingsForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Notification Style</label>
+                            <select class="form-select" name="notification_style">
+                                <option value="gentle" {% if user.gentle_mode %}selected{% endif %}>
+                                    Gentle (recommended for high stress)
+                                </option>
+                                <option value="standard" {% if not user.gentle_mode %}selected{% endif %}>
+                                    Standard
+                                </option>
+                                <option value="minimal">Minimal</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Quiet Hours</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="quiet_hours"
+                                   placeholder="e.g., 22:00-08:00"
+                                   value="{{ quiet_hours }}">
+                            <small class="form-text text-muted">
+                                Notifications will be delayed during these hours
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Stress-based Delays</label>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="stress_delays"
+                                       id="stressDelays"
+                                       {% if stress_delays %}checked{% endif %}>
+                                <label class="form-check-label" for="stressDelays">
+                                    Delay non-urgent notifications when stress ≥ 7/10
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Notification Types</label>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="notify_mentions"
+                                       id="notifyMentions"
+                                       {% if notify_mentions %}checked{% endif %}>
+                                <label class="form-check-label" for="notifyMentions">
+                                    @Mentions in chat
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="notify_reactions"
+                                       id="notifyReactions"
+                                       {% if notify_reactions %}checked{% endif %}>
+                                <label class="form-check-label" for="notifyReactions">
+                                    Reactions to your messages
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       name="notify_breakthroughs"
+                                       id="notifyBreakthroughs"
+                                       {% if notify_breakthroughs %}checked{% endif %}>
+                                <label class="form-check-label" for="notifyBreakthroughs">
+                                    Therapeutic breakthroughs
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-end">
+                    <button type="submit" class="btn btn-therapy-primary">
+                        <i class="fas fa-save me-2"></i> Save Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Emergency Resources -->
+<div class="emergency-resources-card card therapy-card mt-4">
+    <div class="card-header bg-therapy-warning text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-exclamation-triangle me-2"></i>Emergency Resources
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="resource-item">
+                    <h6><i class="fas fa-phone-alt"></i> Crisis Hotlines</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>988</strong> Suicide & Crisis Lifeline</li>
+                        <li><strong>741741</strong> Crisis Text Line (Text HOME)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="resource-item">
+                    <h6><i class="fas fa-hands-helping"></i> Online Support</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#">7 Cups of Tea</a></li>
+                        <li><a href="#">BetterHelp</a></li>
+                        <li><a href="#">Talkspace</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="resource-item">
+                    <h6><i class="fas fa-heart"></i> Self-Care Tools</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="#" data-bs-toggle="modal" data-bs-target="#groundingModal">Grounding Techniques</a></li>
+                        <li><a href="#" data-bs-toggle="modal" data-bs-target="#breathingModal">Breathing Exercises</a></li>
+                        <li><a href="#" data-bs-toggle="modal" data-bs-target="#safetyPlanModal">Safety Plan</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -154,19 +154,155 @@ def html_logout(request):
     # GET request - show confirmation page
     return render(request, 'users/logout_confirmation.html')
 
-# Optional: HTML registration view if needed
+# users/views.py - Update the html_register function to match your template
 @require_http_methods(["GET", "POST"])
 def html_register(request):
-    """HTML registration page for browsers"""
+    """HTML registration page for browsers - therapeutic approach"""
     if request.user.is_authenticated:
         return redirect('therapy:dashboard')
     
     if request.method == 'POST':
-        # You can add HTML form handling here
-        # For now, redirect to API registration
-        return redirect('users:register')
+        # Get form data
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password1 = request.POST.get('password1', '')
+        password2 = request.POST.get('password2', '')
+        emotional_profile = request.POST.get('emotional_profile', 'balanced')
+        gentle_mode = request.POST.get('gentle_mode') == 'on'
+        daily_time_limit = request.POST.get('daily_time_limit', '30')
+        
+        # Validate
+        errors = []
+        
+        # Username validation
+        if not username:
+            errors.append('Username is required')
+        elif len(username) < 3:
+            errors.append('Username must be at least 3 characters')
+        elif len(username) > 150:
+            errors.append('Username is too long (maximum 150 characters)')
+        
+        # Email validation
+        if not email:
+            errors.append('Email is required')
+        elif '@' not in email:
+            errors.append('Please enter a valid email address')
+        
+        # Password validation
+        if not password1:
+            errors.append('Password is required')
+        elif len(password1) < 8:
+            errors.append('Password must be at least 8 characters')
+        
+        if password1 != password2:
+            errors.append('Passwords do not match')
+        
+        # Check if username or email already exists
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        if User.objects.filter(username=username).exists():
+            errors.append('Username already exists')
+        
+        if User.objects.filter(email=email).exists():
+            errors.append('Email already registered')
+        
+        # Daily time limit validation
+        try:
+            daily_time_limit = int(daily_time_limit)
+            if daily_time_limit < 5 or daily_time_limit > 180:
+                errors.append('Daily time limit must be between 5 and 180 minutes')
+        except ValueError:
+            errors.append('Invalid daily time limit')
+        
+        if not errors:
+            # Create user
+            try:
+                # Create user with additional therapeutic fields
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password1
+                )
+                
+                # Set therapeutic fields if they exist in the model
+                if hasattr(user, 'emotional_profile'):
+                    user.emotional_profile = emotional_profile
+                
+                if hasattr(user, 'gentle_mode'):
+                    user.gentle_mode = gentle_mode
+                
+                if hasattr(user, 'daily_time_limit'):
+                    user.daily_time_limit = daily_time_limit
+                
+                # Set therapeutic defaults
+                if hasattr(user, 'current_stress_level'):
+                    user.current_stress_level = 3
+                
+                if hasattr(user, 'therapy_start_date'):
+                    from datetime import date
+                    user.therapy_start_date = date.today()
+                
+                # Save the user with all fields
+                user.save()
+                
+                # Login the user
+                login(request, user)
+                
+                # Gentle success message
+                messages.success(request, 
+                    'Welcome to Code Sanctuary! 🌱 Your gentle learning journey begins now. '
+                    'Take a moment to breathe and remember: progress, not perfection.'
+                )
+                
+                # Redirect to emotional state check-in
+                return redirect('users:emotional_state')
+                
+            except Exception as e:
+                messages.error(request, f'Registration failed. Please try again.')
+                print(f"Registration error: {e}")
+        else:
+            for error in errors:
+                messages.error(request, error)
+            
+            # Store form data to repopulate form
+            request.session['registration_data'] = {
+                'username': username,
+                'email': email,
+                'emotional_profile': emotional_profile,
+                'gentle_mode': gentle_mode,
+                'daily_time_limit': daily_time_limit,
+            }
     
-    return render(request, 'users/register.html')
+    # For GET requests or failed POST
+    # Get stored form data if available
+    form_data = request.session.pop('registration_data', {}) if request.method == 'GET' else {}
+    
+    # Get emotional profile choices from model
+    emotional_profile_choices = []
+    try:
+        from .models import TherapeuticUser
+        if hasattr(TherapeuticUser, 'EmotionalProfile'):
+            emotional_profile_choices = TherapeuticUser.EmotionalProfile.choices
+        else:
+            # Fallback choices
+            emotional_profile_choices = [
+                ('balanced', 'Fairly balanced'),
+                ('anxious', 'Some anxiety'),
+                ('avoidant', 'Tend to avoid challenges'),
+                ('doubtful', 'Self-doubt'),
+                ('overwhelmed', 'Easily overwhelmed'),
+                ('resilient', 'Building resilience'),
+            ]
+    except:
+        emotional_profile_choices = []
+    
+    context = {
+        'form_data': form_data,
+        'emotional_profile_choices': emotional_profile_choices,
+    }
+    
+    return render(request, 'users/register.html', context)
 
 # ===== EMOTIONAL STATE VIEW =====
 @login_required
@@ -450,6 +586,7 @@ def web_logout(request):
     """Web logout view for HTML templates"""
     logout(request)
     return redirect('landing_page')  # Changed from 'users:login'
+# users/views.py - Update the UserRegistrationView
 class UserRegistrationView(generics.CreateAPIView):
     """View for user registration with therapeutic defaults"""
     queryset = TherapeuticUser.objects.all()
@@ -461,8 +598,12 @@ class UserRegistrationView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        # Auto-login after registration
-        login(request, user)
+        # Get the authentication backend
+        from django.contrib.auth import get_backends
+        backend = get_backends()[0]  # Get the first authentication backend
+        
+        # Auto-login after registration with explicit backend
+        login(request, user, backend=backend.__module__ + '.' + backend.__class__.__name__)
         
         return Response({
             'user': UserProfileSerializer(user, context={'request': request}).data,

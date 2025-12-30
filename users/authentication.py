@@ -24,15 +24,31 @@ class TherapeuticAuthenticationBackend(ModelBackend):
             cache.set(cache_key, attempts + 1, 900)  # 15 minutes
         
         try:
-            # Try username first
+            # Try username first (this handles username authentication)
             user = UserModel.objects.get(username=username)
         except UserModel.DoesNotExist:
             try:
-                # Try email
+                # Try email (this handles email authentication)
                 user = UserModel.objects.get(email=username)
             except UserModel.DoesNotExist:
-                # User doesn't exist
+                # User doesn't exist with either username or email
                 return None
+            except UserModel.MultipleObjectsReturned:
+                # Handle duplicate emails - take first active user
+                users = UserModel.objects.filter(email=username, is_active=True)
+                user = users.first() if users.exists() else None
+                if not user:
+                    return None
+        except UserModel.MultipleObjectsReturned:
+            # Handle duplicate usernames - take first active user
+            users = UserModel.objects.filter(username=username, is_active=True)
+            user = users.first() if users.exists() else None
+            if not user:
+                return None
+        
+        # At this point, user should be found or None
+        if not user:
+            return None
         
         # Check password
         if user.check_password(password):

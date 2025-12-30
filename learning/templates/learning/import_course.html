@@ -1,0 +1,480 @@
+<!-- learning/templates/learning/import_course.html -->
+{% extends 'learning/base.html' %}
+{% load static %}
+
+{% block title %}Import Course - Code Sanctuary{% endblock %}
+
+{% block extra_css %}
+<style>
+    .import-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px 0;
+    }
+    
+    .import-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .import-header {
+        background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+    
+    .import-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    
+    .import-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .import-subtitle {
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .course-details {
+        padding: 30px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .course-info-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .course-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        background: #4CAF50;
+        color: white;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .platform-badge {
+        background: #2196F3;
+    }
+    
+    .difficulty-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .beginner { background: #4CAF50; color: white; }
+    .intermediate { background: #FF9800; color: white; }
+    .advanced { background: #f44336; color: white; }
+    
+    .import-form-section {
+        padding: 30px;
+    }
+    
+    .form-group {
+        margin-bottom: 25px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .form-control, .form-select {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+    }
+    
+    .form-text {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .form-check-input {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .form-check-label {
+        font-weight: 500;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+    
+    .btn {
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+        flex: 1;
+        text-align: center;
+    }
+    
+    .btn-primary {
+        background: #4CAF50;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #3d8b40;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+    }
+    
+    .btn-outline-secondary {
+        background: transparent;
+        color: #666;
+        border: 2px solid #ddd;
+    }
+    
+    .btn-outline-secondary:hover {
+        background: #f8f9fa;
+        border-color: #999;
+    }
+    
+    .benefits-list {
+        background: #e8f5e9;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 30px;
+    }
+    
+    .benefits-list h5 {
+        color: #2E7D32;
+        margin-bottom: 15px;
+    }
+    
+    .benefits-list ul {
+        padding-left: 20px;
+        margin-bottom: 0;
+    }
+    
+    .benefits-list li {
+        margin-bottom: 8px;
+        color: #333;
+    }
+    
+    .therapeutic-tip {
+        background: #e3f2fd;
+        border-left: 4px solid #2196F3;
+        padding: 15px;
+        margin-top: 20px;
+        border-radius: 4px;
+    }
+    
+    .therapeutic-tip i {
+        color: #2196F3;
+        margin-right: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .import-container {
+            padding: 15px;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .import-header {
+            padding: 20px;
+        }
+        
+        .import-title {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <div class="import-card">
+        <div class="import-header">
+            <div class="import-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <h1 class="import-title">Add to Learning Plan</h1>
+            <p class="import-subtitle">Import this course to your personalized therapeutic learning journey</p>
+        </div>
+        
+        <div class="course-details">
+            <div class="course-info-card">
+                <h3>{{ course.title }}</h3>
+                <div class="mt-3 mb-3">
+                    <span class="course-badge platform-badge">
+                        <i class="fas fa-external-link-alt me-1"></i>{{ course.platform }}
+                    </span>
+                    <span class="course-badge">
+                        <i class="fas fa-clock me-1"></i>{{ course.estimated_time }}
+                    </span>
+                    <span class="difficulty-badge {{ course.difficulty|lower }}">
+                        {{ course.difficulty }}
+                    </span>
+                    {% if course.is_free %}
+                    <span class="course-badge bg-warning text-dark">
+                        <i class="fas fa-gift me-1"></i>Free
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <strong><i class="fas fa-language me-2 text-primary"></i>Language:</strong>
+                            <span class="ms-2">{{ course.language }}</span>
+                        </div>
+                        {% if course.rating %}
+                        <div class="mb-3">
+                            <strong><i class="fas fa-star me-2 text-warning"></i>Rating:</strong>
+                            <span class="ms-2">{{ course.rating }} ⭐</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if course.university %}
+                        <div class="mb-3">
+                            <strong><i class="fas fa-university me-2 text-info"></i>Provider:</strong>
+                            <span class="ms-2">{{ course.university }}</span>
+                        </div>
+                        {% endif %}
+                        {% if course.students %}
+                        <div class="mb-3">
+                            <strong><i class="fas fa-users me-2 text-success"></i>Students:</strong>
+                            <span class="ms-2">{{ course.students }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <p class="mt-3 text-muted">{{ course.description }}</p>
+            </div>
+        </div>
+        
+        <form method="post" class="import-form-section">
+            {% csrf_token %}
+            
+            <h4 class="mb-4">Customize Your Learning Plan</h4>
+            
+            <!-- Learning Goals -->
+            <div class="form-group">
+                <label class="form-label">Learning Goals</label>
+                <textarea class="form-control" name="learning_goals" rows="3" 
+                          placeholder="What do you hope to achieve with this course? (e.g., Learn JavaScript fundamentals, Build portfolio projects, etc.)"></textarea>
+                <div class="form-text">Setting clear goals helps with therapeutic progress tracking.</div>
+            </div>
+            
+            <!-- Weekly Commitment -->
+            <div class="form-group">
+                <label class="form-label">Weekly Time Commitment</label>
+                <select class="form-select" name="weekly_hours">
+                    <option value="1">1 hour per week (Gentle pace)</option>
+                    <option value="3" selected>3 hours per week (Standard pace)</option>
+                    <option value="5">5 hours per week (Moderate pace)</option>
+                    <option value="10">10+ hours per week (Intensive pace)</option>
+                </select>
+                <div class="form-text">Choose a pace that fits your current energy and schedule.</div>
+            </div>
+            
+            <!-- Therapeutic Focus -->
+            <div class="form-group">
+                <label class="form-label">Therapeutic Focus</label>
+                <select class="form-select" name="therapeutic_focus">
+                    <option value="mindfulness">Mindfulness & Focus</option>
+                    <option value="confidence">Confidence Building</option>
+                    <option value="stress_relief">Stress Relief</option>
+                    <option value="skill_development">Skill Development</option>
+                    <option value="enjoyment" selected>Enjoyment & Exploration</option>
+                </select>
+                <div class="form-text">How would you like this course to support your therapeutic journey?</div>
+            </div>
+            
+            <!-- Notifications -->
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" class="form-check-input" id="notifications" name="notifications" checked>
+                    <label class="form-check-label" for="notifications">
+                        Send me gentle reminders to continue learning
+                    </label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" class="form-check-input" id="break_reminders" name="break_reminders" checked>
+                    <label class="form-check-label" for="break_reminders">
+                        Include therapeutic break reminders during study sessions
+                    </label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" class="form-check-input" id="progress_sharing" name="progress_sharing">
+                    <label class="form-check-label" for="progress_sharing">
+                        Share progress with my therapist (if connected)
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Integration with Internal Learning -->
+            <div class="form-group">
+                <label class="form-label">Integration with Internal Learning</label>
+                <select class="form-select" name="integration_level">
+                    <option value="separate">Keep as separate external course</option>
+                    <option value="complement" selected>Use to complement internal learning paths</option>
+                    <option value="integrated">Integrate fully with therapeutic learning plan</option>
+                </select>
+                <div class="form-text">How should this course work with your existing therapeutic activities?</div>
+            </div>
+            
+            <!-- Therapeutic Tip -->
+            <div class="therapeutic-tip">
+                <i class="fas fa-lightbulb"></i>
+                <strong>Therapeutic Tip:</strong> External courses are great for skill development. Remember to balance them with your therapeutic activities and take breaks when needed.
+            </div>
+            
+            <!-- Benefits of Importing -->
+            <div class="benefits-list">
+                <h5><i class="fas fa-check-circle me-2 text-success"></i>Benefits of Adding to Your Plan:</h5>
+                <ul>
+                    <li>Track progress alongside therapeutic activities</li>
+                    <li>Receive personalized reminders and break suggestions</li>
+                    <li>Integrate with emotional state tracking</li>
+                    <li>Get therapeutic pacing recommendations</li>
+                    <li>Share progress with your support system (optional)</li>
+                </ul>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
+                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i>Add to My Learning Plan
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Quick Links -->
+    <div class="mt-4 text-center">
+        <a href="{% url 'learning:personal_learning_plan' %}" class="text-decoration-none me-4">
+            <i class="fas fa-calendar me-1"></i>View My Learning Plan
+        </a>
+        <a href="{{ course.url }}" target="_blank" class="text-decoration-none me-4">
+            <i class="fas fa-external-link-alt me-1"></i>Visit Course on {{ course.platform }}
+        </a>
+        <a href="{% url 'learning:external_courses' %}" class="text-decoration-none">
+            <i class="fas fa-search me-1"></i>Browse More Courses
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation
+    $('form').on('submit', function(e) {
+        const goals = $('textarea[name="learning_goals"]').val().trim();
+        if (goals.length < 10) {
+            e.preventDefault();
+            alert('Please provide specific learning goals (at least 10 characters). This helps with therapeutic tracking.');
+            $('textarea[name="learning_goals"]').focus();
+            return false;
+        }
+        
+        // Show loading state
+        $('button[type="submit"]').html('<i class="fas fa-spinner fa-spin me-2"></i>Adding to Plan...');
+        $('button[type="submit"]').prop('disabled', true);
+        
+        return true;
+    });
+    
+    // Therapeutic pace suggestion based on emotional state
+    function suggestPace() {
+        // This would normally come from user's emotional state API
+        // For now, use a default suggestion
+        const emotionalState = '{{ user.emotional_profile|default:"neutral" }}';
+        const stressLevel = {{ user.current_stress_level|default:5 }};
+        
+        let suggestion = '';
+        if (stressLevel >= 7) {
+            suggestion = 'Considering your current stress level, we recommend starting with 1-2 hours per week.';
+            $('select[name="weekly_hours"]').val('1');
+        } else if (emotionalState === 'energetic') {
+            suggestion = 'Great energy! You might enjoy 3-5 hours per week.';
+        } else {
+            suggestion = 'A standard pace of 3 hours per week is recommended.';
+        }
+        
+        if (suggestion) {
+            $('<div class="alert alert-info mt-3">' + suggestion + '</div>').insertAfter('select[name="weekly_hours"]').parent();
+        }
+    }
+    
+    // Call suggestion on page load
+    suggestPace();
+    
+    // Platform-specific tips
+    const platform = '{{ platform_name }}';
+    if (platform === 'freecodecamp') {
+        $('.therapeutic-tip').html(`
+            <i class="fas fa-lightbulb"></i>
+            <strong>FreeCodeCamp Tip:</strong> These are project-based courses. Break them into small chunks and celebrate each completed project as a therapeutic achievement.
+        `);
+    } else if (platform === 'udemy') {
+        $('.therapeutic-tip').html(`
+            <i class="fas fa-lightbulb"></i>
+            <strong>Udemy Tip:</strong> Video-based learning. Watch in short sessions (20-30 minutes) and practice immediately after. Use the discussion forums for support.
+        `);
+    } else if (platform === 'coursera') {
+        $('.therapeutic-tip').html(`
+            <i class="fas fa-lightbulb"></i>
+            <strong>Coursera Tip:</strong> University-style courses. Set a consistent weekly schedule. The peer-graded assignments are great for gentle accountability.
+        `);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,352 @@
+{% extends 'social/base.html' %}
+
+{% block social_title %}Create Interaction - Therapeutic Social{% endblock %}
+
+{% block social_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="social-card">
+            <div class="social-card-header">
+                <h3 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Create New Interaction
+                </h3>
+            </div>
+            
+            <div class="card-body">
+                <form method="post" action="{% url 'interaction-create' %}" id="createInteractionForm">
+                    {% csrf_token %}
+                    
+                    <!-- Interaction Type -->
+                    <div class="mb-4">
+                        <label class="form-label h5">What would you like to share?</label>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="form-check-card" onclick="selectType('encouragement')">
+                                    <input type="radio" class="form-check-input" name="interaction_type" 
+                                           id="typeEncouragement" value="encouragement" checked>
+                                    <label class="form-check-label" for="typeEncouragement">
+                                        <div class="card text-center p-3 h-100">
+                                            <i class="fas fa-heart fa-2x text-success mb-3"></i>
+                                            <h6>Encouragement</h6>
+                                            <small class="text-muted">Share positive thoughts</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check-card" onclick="selectType('question')">
+                                    <input type="radio" class="form-check-input" name="interaction_type" 
+                                           id="typeQuestion" value="question">
+                                    <label class="form-check-label" for="typeQuestion">
+                                        <div class="card text-center p-3 h-100">
+                                            <i class="fas fa-question-circle fa-2x text-primary mb-3"></i>
+                                            <h6>Question</h6>
+                                            <small class="text-muted">Ask for guidance</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check-card" onclick="selectType('share')">
+                                    <input type="radio" class="form-check-input" name="interaction_type" 
+                                           id="typeShare" value="share">
+                                    <label class="form-check-label" for="typeShare">
+                                        <div class="card text-center p-3 h-100">
+                                            <i class="fas fa-share-alt fa-2x text-info mb-3"></i>
+                                            <h6>Personal Share</h6>
+                                            <small class="text-muted">Share experiences</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check-card" onclick="selectType('support')">
+                                    <input type="radio" class="form-check-input" name="interaction_type" 
+                                           id="typeSupport" value="support">
+                                    <label class="form-check-label" for="typeSupport">
+                                        <div class="card text-center p-3 h-100">
+                                            <i class="fas fa-hands-helping fa-2x text-warning mb-3"></i>
+                                            <h6>Request Support</h6>
+                                            <small class="text-muted">Ask for help</small>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Title -->
+                    <div class="mb-4">
+                        <label for="title" class="form-label h5">Title (Optional)</label>
+                        <input type="text" class="form-control form-control-lg" id="title" 
+                               name="title" placeholder="Give your interaction a title...">
+                        <div class="form-text">A clear title helps others understand your post</div>
+                    </div>
+                    
+                    <!-- Message -->
+                    <div class="mb-4">
+                        <label for="message" class="form-label h5">Your Message *</label>
+                        <textarea class="form-control" id="message" name="message" 
+                                  rows="6" placeholder="Share your thoughts..." required></textarea>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            This is a safe space. Be kind to yourself and others.
+                        </div>
+                    </div>
+                    
+                    <!-- Therapeutic Intent -->
+                    <div class="mb-4">
+                        <label for="therapeutic_intent" class="form-label h5">
+                            <i class="fas fa-heartbeat me-2"></i>Therapeutic Intent
+                        </label>
+                        <textarea class="form-control" id="therapeutic_intent" name="therapeutic_intent" 
+                                  rows="2" placeholder="What is the therapeutic purpose of this interaction?"></textarea>
+                        <div class="form-text">
+                            Optional: Share your intention for posting (e.g., "To seek support", "To share progress")
+                        </div>
+                    </div>
+                    
+                    <!-- Settings -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="visibility" class="form-label h5">Visibility</label>
+                            <select class="form-select" id="visibility" name="visibility">
+                                <option value="community">Community (All members)</option>
+                                <option value="public">Public (Anyone can see)</option>
+                                <option value="circle">My Support Circles Only</option>
+                                {% if user.is_authenticated %}
+                                <option value="private">Private (Only me)</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label h5">&nbsp;</label>
+                            <div class="mt-3">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="allow_replies" name="allow_replies" checked>
+                                    <label class="form-check-label" for="allow_replies">
+                                        Allow replies
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="is_pinned" name="is_pinned">
+                                    <label class="form-check-label" for="is_pinned">
+                                        Pin this post (High importance)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           id="anonymous" name="anonymous">
+                                    <label class="form-check-label" for="anonymous">
+                                        Post anonymously
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expiration -->
+                    <div class="mb-4">
+                        <label class="form-label h5">Expiration</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   id="enable_expiry" name="enable_expiry">
+                            <label class="form-check-label" for="enable_expiry">
+                                Set expiration date
+                            </label>
+                        </div>
+                        <div id="expirySection" style="display: none;" class="mt-3">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="expires_at_date" class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="expires_at_date" 
+                                           name="expires_at_date">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="expires_at_time" class="form-label">Time</label>
+                                    <input type="time" class="form-control" id="expires_at_time" 
+                                           name="expires_at_time">
+                                </div>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-clock me-1"></i>
+                                This interaction will automatically expire at the selected time
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Therapeutic Content Guidelines -->
+                    <div class="alert alert-info mb-4">
+                        <h5><i class="fas fa-hands-helping me-2"></i>Therapeutic Guidelines</h5>
+                        <ul class="mb-0">
+                            <li>Use "I" statements to express your feelings</li>
+                            <li>Avoid giving unsolicited advice</li>
+                            <li>Focus on your own experiences and feelings</li>
+                            <li>Be supportive and non-judgmental</li>
+                            <li>Respect others' boundaries and privacy</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'community-home' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-outline-primary" onclick="saveDraft()">
+                                <i class="fas fa-save me-2"></i>Save as Draft
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Post to Community
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Select interaction type with visual feedback
+    function selectType(type) {
+        document.querySelectorAll('.form-check-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        event.currentTarget.classList.add('selected');
+        document.getElementById(`type${type.charAt(0).toUpperCase() + type.slice(1)}`).checked = true;
+        
+        // Update placeholder text based on type
+        const placeholders = {
+            'encouragement': 'Share encouraging words...',
+            'question': 'Ask your question...',
+            'share': 'Share your experience...',
+            'support': 'Describe what support you need...'
+        };
+        document.getElementById('message').placeholder = placeholders[type] || 'Share your thoughts...';
+    }
+    
+    // Toggle expiration section
+    document.getElementById('enable_expiry')?.addEventListener('change', function() {
+        const expirySection = document.getElementById('expirySection');
+        if (this.checked) {
+            expirySection.style.display = 'block';
+            
+            // Set default expiration (7 days from now)
+            const defaultDate = new Date();
+            defaultDate.setDate(defaultDate.getDate() + 7);
+            
+            document.getElementById('expires_at_date').value = 
+                defaultDate.toISOString().split('T')[0];
+            document.getElementById('expires_at_time').value = '23:59';
+        } else {
+            expirySection.style.display = 'none';
+        }
+    });
+    
+    // Save draft functionality
+    function saveDraft() {
+        const formData = new FormData(document.getElementById('createInteractionForm'));
+        const data = Object.fromEntries(formData);
+        
+        // Save to localStorage (in a real app, this would be an API call)
+        localStorage.setItem('interaction_draft', JSON.stringify(data));
+        showNotification('Draft saved successfully!', 'success');
+    }
+    
+    // Load draft on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const draft = localStorage.getItem('interaction_draft');
+        if (draft) {
+            const data = JSON.parse(draft);
+            
+            // Populate form fields
+            document.getElementById('title').value = data.title || '';
+            document.getElementById('message').value = data.message || '';
+            document.getElementById('therapeutic_intent').value = data.therapeutic_intent || '';
+            document.getElementById('visibility').value = data.visibility || 'community';
+            
+            // Select interaction type
+            const typeRadio = document.getElementById(`type${(data.interaction_type || 'encouragement').charAt(0).toUpperCase() + (data.interaction_type || 'encouragement').slice(1)}`);
+            if (typeRadio) {
+                typeRadio.checked = true;
+                selectType(data.interaction_type || 'encouragement');
+            }
+            
+            showNotification('Draft loaded from previous session', 'info');
+        }
+    });
+    
+    // Form submission
+    document.getElementById('createInteractionForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+        
+        // Add expires_at if enabled
+        if (document.getElementById('enable_expiry').checked) {
+            const date = document.getElementById('expires_at_date').value;
+            const time = document.getElementById('expires_at_time').value;
+            if (date && time) {
+                data.expires_at = `${date}T${time}:00`;
+            }
+        }
+        
+        fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': data.csrfmiddlewaretoken
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                showNotification('Interaction created successfully!', 'success');
+                
+                // Clear draft
+                localStorage.removeItem('interaction_draft');
+                
+                // Redirect to the new interaction
+                setTimeout(() => {
+                    window.location.href = `/social/interactions/${data.id}/`;
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to create interaction');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'error');
+        });
+    });
+</script>
+
+<style>
+.form-check-card {
+    cursor: pointer;
+}
+.form-check-card .card {
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+.form-check-card .card:hover {
+    border-color: var(--social-primary);
+    transform: translateY(-2px);
+}
+.form-check-card.selected .card {
+    border-color: var(--social-primary);
+    background-color: rgba(74, 111, 165, 0.05);
+}
+.form-check-input {
+    position: absolute;
+    opacity: 0;
+}
+</style>
+{% endblock %}

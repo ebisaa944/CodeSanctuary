@@ -1,0 +1,267 @@
+{% extends 'social/base.html' %}
+
+{% block social_title %}Achievements - Therapeutic Social{% endblock %}
+
+{% block social_content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Achievements Header -->
+        <div class="social-card mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-2">
+                        <i class="fas fa-trophy me-2"></i>Therapeutic Achievements
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Celebrate growth and progress through therapeutic achievements
+                    </p>
+                </div>
+                {% if user.is_authenticated %}
+                <div class="text-end">
+                    <div class="h4 mb-0">{{ user_achievements.count }}</div>
+                    <small class="text-muted">Your achievements</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Achievement Tiers -->
+        <div class="row mb-5">
+            <!-- Bronze Tier -->
+            <div class="col-md-4 mb-4">
+                <div class="social-card h-100" style="border-color: #cd7f32;">
+                    <div class="social-card-header" style="background: linear-gradient(135deg, #cd7f32, #e0a95c);">
+                        <h4 class="mb-0 text-white">
+                            <i class="fas fa-award me-2"></i>Bronze Tier
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Beginner achievements for starting your therapeutic journey</p>
+                        <div id="bronzeAchievements">
+                            {% for achievement in achievements %}
+                                {% if achievement.tier == 'bronze' %}
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="achievement-icon bronze me-3">
+                                        <i class="fas fa-seedling"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ achievement.name }}</h6>
+                                        <small class="text-muted">{{ achievement.description }}</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% empty %}
+                            <p class="text-muted text-center">No bronze achievements available</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Silver Tier -->
+            <div class="col-md-4 mb-4">
+                <div class="social-card h-100" style="border-color: #c0c0c0;">
+                    <div class="social-card-header" style="background: linear-gradient(135deg, #c0c0c0, #e0e0e0);">
+                        <h4 class="mb-0 text-dark">
+                            <i class="fas fa-medal me-2"></i>Silver Tier
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Intermediate achievements for continued growth</p>
+                        <div id="silverAchievements">
+                            {% for achievement in achievements %}
+                                {% if achievement.tier == 'silver' %}
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="achievement-icon silver me-3">
+                                        <i class="fas fa-leaf"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ achievement.name }}</h6>
+                                        <small class="text-muted">{{ achievement.description }}</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% empty %}
+                            <p class="text-muted text-center">No silver achievements available</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gold Tier -->
+            <div class="col-md-4 mb-4">
+                <div class="social-card h-100" style="border-color: #ffd700;">
+                    <div class="social-card-header" style="background: linear-gradient(135deg, #ffd700, #ffe44d);">
+                        <h4 class="mb-0 text-dark">
+                            <i class="fas fa-crown me-2"></i>Gold Tier
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Advanced achievements for significant therapeutic progress</p>
+                        <div id="goldAchievements">
+                            {% for achievement in achievements %}
+                                {% if achievement.tier == 'gold' %}
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="achievement-icon gold me-3">
+                                        <i class="fas fa-tree"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ achievement.name }}</h6>
+                                        <small class="text-muted">{{ achievement.description }}</small>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% empty %}
+                            <p class="text-muted text-center">No gold achievements available</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Achievements -->
+        {% if user.is_authenticated %}
+        <div class="social-card mb-4">
+            <div class="social-card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-check me-2"></i>Your Achievements
+                </h4>
+                <span class="badge bg-primary">{{ user_achievements.count }} earned</span>
+            </div>
+            
+            <div class="card-body">
+                {% if user_achievements %}
+                <div class="row" id="userAchievements">
+                    {% for user_achievement in user_achievements %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="social-card h-100">
+                            <div class="d-flex align-items-start">
+                                <div class="achievement-icon {{ user_achievement.achievement.tier }} me-3">
+                                    {% if user_achievement.achievement.tier == 'gold' %}
+                                    <i class="fas fa-crown"></i>
+                                    {% elif user_achievement.achievement.tier == 'silver' %}
+                                    <i class="fas fa-medal"></i>
+                                    {% else %}
+                                    <i class="fas fa-award"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ user_achievement.achievement.name }}</h6>
+                                    <small class="text-muted d-block mb-2">
+                                        Earned {{ user_achievement.earned_at|date:"M j, Y" }}
+                                    </small>
+                                    {% if user_achievement.reflection_notes %}
+                                    <div class="therapeutic-message small mt-2">
+                                        <strong>Your reflection:</strong>
+                                        {{ user_achievement.reflection_notes|truncatechars:100 }}
+                                    </div>
+                                    {% endif %}
+                                    {% if user_achievement.shared_publicly %}
+                                    <span class="badge bg-success mt-2">
+                                        <i class="fas fa-share-alt"></i> Shared publicly
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-star fa-2x text-muted mb-3"></i>
+                    <h5>No achievements yet</h5>
+                    <p class="text-muted">Start participating in the community to earn achievements!</p>
+                    <a href="{% url 'social:home' %}" class="btn btn-primary">
+                        <i class="fas fa-arrow-right me-2"></i>Go to Community
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Community Achievements -->
+        <div class="social-card">
+            <div class="social-card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Recently Earned in Community
+                </h4>
+            </div>
+            
+            <div class="card-body">
+                {% if recent_community_achievements %}
+                <div id="recentAchievements">
+                    {% for user_achievement in recent_community_achievements %}
+                    <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
+                        <div class="user-avatar me-3">
+                            {{ user_achievement.user.username|first|upper }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">{{ user_achievement.user.username }}</h6>
+                                <span class="badge bg-{{ user_achievement.achievement.tier }}">
+                                    {{ user_achievement.achievement.get_tier_display }}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-muted">
+                                    Earned {{ user_achievement.achievement.name }}
+                                </small>
+                                <small class="text-muted">
+                                    {{ user_achievement.earned_at|timesince }} ago
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="#" class="btn btn-outline-primary btn-sm">
+                        View All Community Achievements
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-users-slash fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No community achievements yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.achievement-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.achievement-icon.bronze {
+    background-color: #cd7f32;
+    color: white;
+}
+
+.achievement-icon.silver {
+    background-color: #c0c0c0;
+    color: #333;
+}
+
+.achievement-icon.gold {
+    background-color: #ffd700;
+    color: #333;
+}
+</style>
+{% endblock %}

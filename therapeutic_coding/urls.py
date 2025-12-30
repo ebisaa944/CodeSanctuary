@@ -36,7 +36,7 @@ urlpatterns = [
     # Other app URLs
     path('therapy/', include('therapy.urls')),
     path('learning/', include('learning.urls')),
-    path('social/', include('social.urls')),
+     path('social/', include('social.urls')),  # This line is crucial!
     path('chat/', include('chat.urls')),
 ]
 

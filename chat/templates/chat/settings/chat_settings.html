@@ -1,0 +1,266 @@
+{% extends "chat/base.html" %}
+{% load static %}
+
+{% block chat_title %}Chat Settings | Therapeutic Chat{% endblock %}
+
+{% block chat_page_title %}Chat Settings & Preferences{% endblock %}
+
+{% block chat_page_subtitle %}Customize your therapeutic chat experience{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'chat/css/settings.css' %}">
+{% endblock %}
+
+{% block chat_content %}
+<div class="chat-settings-container">
+    <div class="row">
+        <!-- Navigation -->
+        <div class="col-md-3">
+            <div class="settings-nav card therapy-card">
+                <div class="list-group list-group-flush">
+                    <a href="#therapeutic" 
+                       class="list-group-item list-group-item-action active" 
+                       data-bs-toggle="tab">
+                        <i class="fas fa-heart me-2"></i> Therapeutic
+                    </a>
+                    <a href="#privacy" 
+                       class="list-group-item list-group-item-action" 
+                       data-bs-toggle="tab">
+                        <i class="fas fa-user-shield me-2"></i> Privacy
+                    </a>
+                    <a href="#notifications" 
+                       class="list-group-item list-group-item-action" 
+                       data-bs-toggle="tab">
+                        <i class="fas fa-bell me-2"></i> Notifications
+                    </a>
+                    <a href="#appearance" 
+                       class="list-group-item list-group-item-action" 
+                       data-bs-toggle="tab">
+                        <i class="fas fa-palette me-2"></i> Appearance
+                    </a>
+                    <a href="#safety" 
+                       class="list-group-item list-group-item-action" 
+                       data-bs-toggle="tab">
+                        <i class="fas fa-shield-alt me-2"></i> Safety
+                    </a>
+                    <a href="#export" 
+                       class="list-group-item list-group-item-action" 
+                       data-bs-toggle="tab">
+                        <i class="fas fa-download me-2"></i> Export
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Stress Level Card -->
+            <div class="card therapy-card mt-4">
+                <div class="card-body text-center">
+                    <div class="stress-level-display-large">
+                        <i class="fas fa-heartbeat fa-2x mb-3 text-therapy-primary"></i>
+                        <h3>{{ user.current_stress_level }}/10</h3>
+                        <p class="small mb-0">Current Stress Level</p>
+                    </div>
+                    <button class="btn btn-sm btn-outline-therapy mt-3 w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#stressUpdateModal">
+                        <i class="fas fa-sliders-h me-1"></i> Update
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="col-md-9">
+            <div class="tab-content">
+                <!-- Therapeutic Tab -->
+                <div class="tab-pane fade show active" id="therapeutic">
+                    {% include "chat/settings/therapeutic_preferences.html" %}
+                </div>
+                
+                <!-- Privacy Tab -->
+                <div class="tab-pane fade" id="privacy">
+                    {% include "chat/settings/privacy_settings.html" %}
+                </div>
+                
+                <!-- Notifications Tab -->
+                <div class="tab-pane fade" id="notifications">
+                    {% include "chat/settings/notification_settings.html" %}
+                </div>
+                
+                <!-- Appearance Tab -->
+                <div class="tab-pane fade" id="appearance">
+                    {% include "chat/settings/appearance_settings.html" %}
+                </div>
+                
+                <!-- Safety Tab -->
+                <div class="tab-pane fade" id="safety">
+                    {% include "chat/settings/safety_settings.html" %}
+                </div>
+                
+                <!-- Export Tab -->
+                <div class="tab-pane fade" id="export">
+                    {% include "chat/settings/export_settings.html" %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stress Update Modal -->
+<div class="modal fade" id="stressUpdateModal" tabindex="-1" aria-labelledby="stressUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-therapy-primary text-white">
+                <h5 class="modal-title" id="stressUpdateModalLabel">
+                    <i class="fas fa-heartbeat me-2"></i>Update Stress Level
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="stress-update-form">
+                    <h5 class="mb-4">How stressed are you feeling right now?</h5>
+                    
+                    <div class="stress-scale mb-4">
+                        {% for i in "12345678910"|make_list %}
+                        <button class="stress-level-btn {% if forloop.counter == user.current_stress_level %}active{% endif %}"
+                                data-level="{{ forloop.counter }}">
+                            {{ forloop.counter }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="stress-labels d-flex justify-content-between mb-4">
+                        <small class="text-muted">Very Relaxed</small>
+                        <small class="text-muted">Extremely Stressed</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Brief Context (Optional)</label>
+                        <textarea class="form-control" 
+                                  id="stressContext" 
+                                  rows="2" 
+                                  placeholder="What's contributing to how you feel?"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-therapy-primary" id="updateStressBtn">
+                    Update Stress Level
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_footer_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Settings form submission
+        const settingsForms = document.querySelectorAll('.settings-form');
+        settingsForms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSettings(this);
+            });
+        });
+        
+        // Stress level update
+        const stressLevelBtns = document.querySelectorAll('.stress-level-btn');
+        const updateStressBtn = document.getElementById('updateStressBtn');
+        
+        let selectedStressLevel = {{ user.current_stress_level }};
+        
+        stressLevelBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                stressLevelBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                selectedStressLevel = parseInt(this.dataset.level);
+            });
+        });
+        
+        updateStressBtn.addEventListener('click', function() {
+            const context = document.getElementById('stressContext').value;
+            
+            fetch('{% url "chat:update_stress_level" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    stress_level: selectedStressLevel,
+                    context: context
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                showToast('Failed to update stress level', 'error');
+            });
+        });
+        
+        // Gentle mode toggle
+        const gentleModeToggle = document.getElementById('gentleModeToggle');
+        if (gentleModeToggle) {
+            gentleModeToggle.addEventListener('change', function() {
+                toggleGentleMode(this.checked);
+            });
+        }
+    });
+    
+    function saveSettings(form) {
+        const formData = new FormData(form);
+        
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            showToast(data.message || 'Settings saved', 'success');
+        })
+        .catch(error => {
+            showToast('Failed to save settings', 'error');
+        });
+    }
+    
+    function toggleGentleMode(enabled) {
+        fetch('{% url "chat:toggle_gentle_mode" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                gentle_mode: enabled
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Gentle mode ' + (enabled ? 'enabled' : 'disabled'), 'success');
+                if (enabled) {
+                    document.body.classList.add('gentle-mode');
+                } else {
+                    document.body.classList.remove('gentle-mode');
+                }
+            }
+        })
+        .catch(error => {
+            showToast('Failed to update gentle mode', 'error');
+        });
+    }
+</script>
+{% endblock %}

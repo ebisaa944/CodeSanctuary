@@ -1,462 +1,286 @@
+# social/models.py
+"""
+Models for therapeutic social app
+"""
+
+import uuid
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-import uuid
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 
 class GentleInteraction(models.Model):
-    """Advanced therapeutic social interaction system"""
+    """
+    Therapeutic interaction between users
+    """
+    INTERACTION_TYPES = [
+        ('encouragement', 'Encouragement'),
+        ('question', 'Question'),
+        ('share', 'Personal Share'),
+        ('support', 'Request Support'),
+    ]
     
-    class InteractionType(models.TextChoices):
-        ENCOURAGEMENT = 'encouragement', 'Words of Encouragement'
-        ACHIEVEMENT = 'achievement', 'Achievement Share'
-        QUESTION = 'question', 'Gentle Question'
-        RESOURCE = 'resource', 'Resource Share'
-        GRATITUDE = 'gratitude', 'Expression of Gratitude'
-        REFLECTION = 'reflection', 'Learning Reflection'
-        SUPPORT = 'support', 'Request Support'
+    VISIBILITY_CHOICES = [
+        ('public', 'Public'),
+        ('community', 'Community Only'),
+        ('circle', 'Circle Members Only'),
+        ('private', 'Private'),
+        ('anonymous', 'Anonymous'),
+    ]
     
-    class VisibilityLevel(models.TextChoices):
-        PUBLIC = 'public', 'Public (Visible to all)'
-        COMMUNITY = 'community', 'Community Only'
-        ANONYMOUS = 'anonymous', 'Anonymous'
-        PRIVATE = 'private', 'Private to Recipient'
-    
-    # Core fields
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    interaction_type = models.CharField(
-        max_length=20,
-        choices=InteractionType.choices,
-        default=InteractionType.ENCOURAGEMENT,
-        db_index=True
-    )
-    
-    # Participants
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     sender = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='sent_interactions',
+        User,
+        on_delete=models.SET_NULL,
         null=True,
-        blank=True  # Allow anonymous interactions
+        blank=True,
+        related_name='sent_interactions'
     )
-    
     recipient = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='received_interactions',
+        User,
+        on_delete=models.SET_NULL,
         null=True,
-        blank=True  # Allow general posts
+        blank=True,
+        related_name='received_interactions'
     )
-    
-    # Content
     title = models.CharField(max_length=200, blank=True)
     message = models.TextField()
-    
-    # Metadata
+    interaction_type = models.CharField(
+        max_length=20,
+        choices=INTERACTION_TYPES,
+        default='encouragement'
+    )
+    therapeutic_intent = models.TextField(blank=True)
+    therapeutic_impact_score = models.IntegerField(default=50)
     visibility = models.CharField(
         max_length=20,
-        choices=VisibilityLevel.choices,
-        default=VisibilityLevel.ANONYMOUS
+        choices=VISIBILITY_CHOICES,
+        default='community'
     )
-    
-    is_pinned = models.BooleanField(default=False)
     allow_replies = models.BooleanField(default=True)
-    
-    # Therapeutic features
-    therapeutic_intent = models.TextField(blank=True, help_text="Intent behind the interaction")
-    expected_response_time = models.CharField(
-        max_length=20,
-        choices=[
-            ('no_response', 'No response needed'),
-            ('whenever', 'Whenever convenient'),
-            ('within_day', 'Within a day'),
-            ('urgent', 'Needs attention'),
-        ],
-        default='whenever'
-    )
-    
-    # Engagement tracking
-    likes_count = models.PositiveIntegerField(default=0)
-    replies_count = models.PositiveIntegerField(default=0)
-    shares_count = models.PositiveIntegerField(default=0)
-    
-    # Content moderation
-    is_moderated = models.BooleanField(default=False)
-    moderator_notes = models.TextField(blank=True)
-    
-    # Technical
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    is_pinned = models.BooleanField(default=False)
+    anonymous = models.BooleanField(default=False)
+    likes_count = models.IntegerField(default=0)
+    views_count = models.IntegerField(default=0)
     expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Parent interaction for replies
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='replies'
+    )
     
     class Meta:
         ordering = ['-is_pinned', '-created_at']
-        verbose_name_plural = 'Gentle Interactions'
         indexes = [
+            models.Index(fields=['visibility', 'created_at']),
+            models.Index(fields=['sender', 'created_at']),
             models.Index(fields=['interaction_type', 'created_at']),
-            models.Index(fields=['sender', 'recipient', 'created_at']),
         ]
     
     def __str__(self):
-        if self.sender:
-            sender_name = self.sender.username if not self.is_anonymous else 'Anonymous'
-        else:
-            sender_name = 'System'
-        
-        recipient_name = self.recipient.username if self.recipient else 'Community'
-        return f"{sender_name} → {recipient_name}: {self.interaction_type}"
-    
-    def save(self, *args, **kwargs):
-        # Set expiration for certain types
-        if not self.expires_at and self.interaction_type in ['encouragement', 'question']:
-            self.expires_at = timezone.now() + timezone.timedelta(days=30)
-        
-        # Auto-moderation for new posts
-        if not self.pk and not self.is_moderated:
-            self._auto_moderate()
-        
-        super().save(*args, **kwargs)
-    
-    def _auto_moderate(self):
-        """Simple auto-moderation based on content"""
-        import re
-        
-        # List of concerning patterns (simplified)
-        concerning_patterns = [
-            r'\b(hate|stupid|idiot|worthless)\b',
-            r'\b(kill|hurt|harm)\b',
-            # Add more patterns as needed
-        ]
-        
-        content = f"{self.title} {self.message}".lower()
-        for pattern in concerning_patterns:
-            if re.search(pattern, content):
-                self.is_moderated = True
-                self.moderator_notes = "Flagged for review by auto-moderation"
-                break
-    
-    @property
-    def is_anonymous(self):
-        """Check if this is an anonymous interaction"""
-        return (self.visibility == self.VisibilityLevel.ANONYMOUS or 
-                self.sender is None)
-    
-    @property
-    def display_name(self):
-        """Get display name based on visibility"""
-        if self.is_anonymous:
-            return 'Anonymous Friend'
-        elif self.sender:
-            return self.sender.username
-        return 'Community Member'
-    
-    @property
-    def therapeutic_impact_score(self):
-        """Calculate therapeutic impact score"""
-        base_score = self.likes_count * 2 + self.replies_count * 3
-        
-        # Adjust based on interaction type
-        type_multipliers = {
-            'encouragement': 1.5,
-            'gratitude': 1.3,
-            'achievement': 1.2,
-            'support': 1.1,
-            'question': 1.0,
-            'reflection': 1.0,
-            'resource': 0.8,
-        }
-        
-        multiplier = type_multipliers.get(self.interaction_type, 1.0)
-        return int(base_score * multiplier)
-    
-    def can_user_see(self, user):
-        """Check if a user can see this interaction"""
-        if self.visibility == self.VisibilityLevel.PUBLIC:
-            return True
-        elif self.visibility == self.VisibilityLevel.ANONYMOUS:
-            return True
-        elif self.visibility == self.VisibilityLevel.COMMUNITY:
-            return user.is_authenticated
-        elif self.visibility == self.VisibilityLevel.PRIVATE:
-            return user == self.recipient or user == self.sender
-        return False
+        return f"{self.get_interaction_type_display()} - {self.title or 'No title'}"
     
     def create_reply(self, user, message, anonymous=False):
         """Create a reply to this interaction"""
         if not self.allow_replies:
-            raise ValidationError("Replies are not allowed for this interaction")
+            raise ValidationError("Replies are not allowed for this interaction.")
         
         reply = GentleInteraction.objects.create(
-            interaction_type=self.InteractionType.REFLECTION,
-            sender=user,
+            sender=None if anonymous else user,
             recipient=self.sender,
             message=message,
-            visibility=self.VisibilityLevel.ANONYMOUS if anonymous else self.VisibilityLevel.COMMUNITY
+            interaction_type='encouragement',  # Replies are encouragements
+            therapeutic_intent="To respond with support and understanding",
+            visibility=self.visibility,
+            anonymous=anonymous,
+            parent=self
         )
         
-        self.replies_count += 1
-        self.save(update_fields=['replies_count'])
-        
         return reply
+    
+    def is_expired(self):
+        """Check if the interaction has expired"""
+        if self.expires_at:
+            return timezone.now() > self.expires_at
+        return False
+    
+    @property
+    def is_visible_to_user(self, user):
+        """Check if interaction is visible to given user"""
+        if self.visibility == 'public':
+            return True
+        elif self.visibility == 'community':
+            return user.is_authenticated
+        elif self.visibility == 'circle':
+            # Check if user is in same circles as sender
+            return False  # Implement circle logic
+        elif self.visibility == 'private':
+            return user == self.sender or user == self.recipient
+        elif self.visibility == 'anonymous':
+            return True
+        return False
+
+
+class SupportCircle(models.Model):
+    """
+    Therapeutic support circle for group interactions
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    focus_areas = models.CharField(max_length=200)  # e.g., "anxiety, stress, self-care"
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_circles'
+    )
+    is_public = models.BooleanField(default=True)
+    allow_anonymous = models.BooleanField(default=False)
+    active_members = models.IntegerField(default=0)
+    max_members = models.IntegerField(default=20)
+    total_interactions = models.IntegerField(default=0)
+    join_code = models.CharField(max_length=50, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-active_members', 'name']
+        indexes = [
+            models.Index(fields=['is_public', 'active_members']),
+            models.Index(fields=['focus_areas']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.active_members} members)"
+    
+    def clean(self):
+        """Validate circle data"""
+        if self.active_members > self.max_members:
+            raise ValidationError("Active members cannot exceed maximum capacity.")
+        
+        if not self.is_public and not self.join_code:
+            raise ValidationError("Private circles require a join code.")
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+
+class CircleMembership(models.Model):
+    """
+    User membership in support circles
+    """
+    ROLE_CHOICES = [
+        ('leader', 'Circle Leader'),
+        ('moderator', 'Moderator'),
+        ('member', 'Member'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    circle = models.ForeignKey(
+        SupportCircle,
+        on_delete=models.CASCADE,
+        related_name='memberships'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='circle_memberships'
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='member'
+    )
+    notification_preferences = models.JSONField(
+        default=dict,
+        help_text="Notification settings for this circle"
+    )
+    introduction = models.TextField(blank=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['circle', 'user']
+        ordering = ['role', 'joined_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.circle.name} ({self.role})"
 
 
 class Achievement(models.Model):
-    """Therapeutic achievement and milestone system"""
+    """
+    Therapeutic achievements for user progress
+    """
+    TIER_CHOICES = [
+        ('bronze', 'Bronze'),
+        ('silver', 'Silver'),
+        ('gold', 'Gold'),
+    ]
     
-    class AchievementTier(models.TextChoices):
-        GENTLE = 'gentle', '🌱 Gentle Start'
-        CONFIDENT = 'confident', '🌿 Building Confidence'
-        RESILIENT = 'resilient', '🌳 Becoming Resilient'
-        MASTER = 'master', '🏔️ Master of Self'
-        THERAPEUTIC = 'therapeutic', '🌟 Therapeutic Breakthrough'
-    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
-    tier = models.CharField(max_length=20, choices=AchievementTier.choices)
-    
-    # Visual representation
-    icon_name = models.CharField(max_length=50, default='star')
-    color = models.CharField(max_length=7, default='#FFD700')  # Gold
-    
-    # Requirements
-    requirement_type = models.CharField(
-        max_length=20,
-        choices=[
-            ('activities_completed', 'Complete Activities'),
-            ('streak_days', 'Consecutive Days'),
-            ('stress_reduction', 'Reduce Stress'),
-            ('help_others', 'Help Others'),
-            ('breakthrough', 'Therapeutic Breakthrough'),
-            ('custom', 'Custom Criteria'),
-        ]
-    )
-    
-    requirement_value = models.IntegerField(default=1)
-    requirement_data = models.JSONField(
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='bronze')
+    icon_name = models.CharField(max_length=50, default='award')  # FontAwesome icon
+    criteria = models.JSONField(
         default=dict,
-        blank=True,
-        help_text="Additional requirement data"
+        help_text="Criteria for earning this achievement"
     )
-    
-    # Therapeutic value
-    therapeutic_message = models.TextField(blank=True)
-    reflection_prompt = models.TextField(blank=True)
-    
-    # Metadata
     is_active = models.BooleanField(default=True)
+    total_earners = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         ordering = ['tier', 'name']
     
     def __str__(self):
-        return f"{self.get_tier_display()} - {self.name}"
+        return f"{self.get_tier_display()}: {self.name}"
     
-    def check_achievement(self, user):
-        """Check if a user has earned this achievement"""
-        from apps.learning.models import UserProgress
-        
-        if self.requirement_type == 'activities_completed':
-            completed = UserProgress.objects.filter(
-                user=user,
-                status='completed'
-            ).count()
-            return completed >= self.requirement_value
-        
-        elif self.requirement_type == 'streak_days':
-            return user.consecutive_days >= self.requirement_value
-        
-        elif self.requirement_type == 'stress_reduction':
-            # Simplified check - would need historical data
-            return user.current_stress_level <= 5
-        
-        elif self.requirement_type == 'breakthrough':
-            progress_with_breakthrough = UserProgress.objects.filter(
-                user=user,
-                breakthrough_notes__isnull=False
-            ).exists()
-            return progress_with_breakthrough
-        
-        return False
+    def update_earner_count(self):
+        """Update total earners count"""
+        self.total_earners = self.userachievement_set.count()
+        self.save()
 
 
 class UserAchievement(models.Model):
-    """Link between users and achievements they've earned"""
-    
+    """
+    User-earned achievements
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         on_delete=models.CASCADE,
-        related_name='earned_achievements'
+        related_name='achievements'
     )
-    
     achievement = models.ForeignKey(
         Achievement,
-        on_delete=models.CASCADE,
-        related_name='user_achievements'
+        on_delete=models.CASCADE
     )
-    
-    earned_at = models.DateTimeField(auto_now_add=True)
-    context_data = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Context about how achievement was earned"
-    )
-    
-    shared_publicly = models.BooleanField(default=False)
     reflection_notes = models.TextField(blank=True)
+    shared_publicly = models.BooleanField(default=False)
+    earned_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         unique_together = ['user', 'achievement']
         ordering = ['-earned_at']
-        verbose_name_plural = 'User Achievements'
     
     def __str__(self):
         return f"{self.user.username} - {self.achievement.name}"
     
-    def share_to_community(self, message=''):
-        """Share this achievement with the community"""
-        interaction = GentleInteraction.objects.create(
-            interaction_type=GentleInteraction.InteractionType.ACHIEVEMENT,
-            sender=self.user,
-            title=f"Achievement Unlocked: {self.achievement.name}",
-            message=message or f"I just earned {self.achievement.name}! {self.achievement.therapeutic_message}",
-            visibility=GentleInteraction.VisibilityLevel.COMMUNITY
-        )
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
         
-        self.shared_publicly = True
-        self.save(update_fields=['shared_publicly'])
-        
-        return interaction
-
-
-class SupportCircle(models.Model):
-    """Therapeutic support group system"""
-    
-    name = models.CharField(max_length=100)
-    description = models.TextField()
-    
-    # Circle settings
-    max_members = models.PositiveIntegerField(default=10)
-    is_public = models.BooleanField(default=False)
-    join_code = models.CharField(max_length=20, blank=True, unique=True)
-    
-    # Therapeutic focus
-    focus_areas = models.JSONField(
-        default=list,
-        blank=True,
-        help_text="List of therapeutic focus areas"
-    )
-    
-    # Rules and guidelines
-    community_guidelines = models.TextField(blank=True)
-    meeting_schedule = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Weekly meeting schedule"
-    )
-    
-    # Statistics
-    total_interactions = models.PositiveIntegerField(default=0)
-    active_members = models.PositiveIntegerField(default=0)
-    
-    # Metadata
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='created_circles'
-    )
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['-active_members', 'name']
-    
-    def __str__(self):
-        return f"{self.name} ({self.active_members} members)"
-    
-    def add_member(self, user):
-        """Add a member to the support circle"""
-        if self.members.count() >= self.max_members:
-            raise ValidationError("Support circle is full")
-        
-        membership, created = CircleMembership.objects.get_or_create(
-            circle=self,
-            user=user,
-            defaults={'role': 'member'}
-        )
-        
-        if created:
-            self.active_members += 1
-            self.save(update_fields=['active_members'])
-        
-        return membership
-    
-    def create_gentle_checkin(self, user, emotion_data):
-        """Create a gentle group checkin"""
-        if not self.members.filter(user=user).exists():
-            raise ValidationError("User is not a member of this circle")
-        
-        # Create an interaction for the circle
-        interaction = GentleInteraction.objects.create(
-            interaction_type=GentleInteraction.InteractionType.REFLECTION,
-            sender=user,
-            title=f"Group Check-in: {user.username}",
-            message=f"I'm feeling {emotion_data.get('emotion', '...')} today.",
-            visibility=GentleInteraction.VisibilityLevel.COMMUNITY
-        )
-        
-        self.total_interactions += 1
-        self.save(update_fields=['total_interactions'])
-        
-        return interaction
-
-
-class CircleMembership(models.Model):
-    """Membership in a support circle"""
-    
-    class MemberRole(models.TextChoices):
-        LEADER = 'leader', 'Circle Leader'
-        SUPPORTER = 'supporter', 'Active Supporter'
-        MEMBER = 'member', 'Member'
-        OBSERVER = 'observer', 'Observer'
-    
-    circle = models.ForeignKey(
-        SupportCircle,
-        on_delete=models.CASCADE,
-        related_name='memberships'
-    )
-    
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='circle_memberships'
-    )
-    
-    role = models.CharField(
-        max_length=20,
-        choices=MemberRole.choices,
-        default=MemberRole.MEMBER
-    )
-    
-    joined_at = models.DateTimeField(auto_now_add=True)
-    last_active = models.DateTimeField(auto_now=True)
-    
-    # Therapeutic metrics
-    support_given = models.PositiveIntegerField(default=0)
-    support_received = models.PositiveIntegerField(default=0)
-    
-    # Preferences
-    notification_preferences = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Notification settings for circle"
-    )
-    
-    class Meta:
-        unique_together = ['circle', 'user']
-        ordering = ['role', '-joined_at']
-    
-    def __str__(self):
-        return f"{self.user.username} in {self.circle.name}"
+        if is_new:
+            # Update achievement's total earners count
+            self.achievement.update_earner_count()

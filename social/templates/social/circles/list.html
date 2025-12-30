@@ -1,0 +1,286 @@
+{% extends 'social/base.html' %}
+
+{% block social_title %}Support Circles - Therapeutic Social{% endblock %}
+
+{% block social_content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-users me-2"></i>Support Circles</h2>
+            {% if user.is_authenticated %}
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCircleModal">
+                <i class="fas fa-plus me-2"></i>Create New Circle
+            </button>
+            {% endif %}
+        </div>
+        
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-hands-helping me-2"></i>
+            <strong>What are Support Circles?</strong>
+            <p class="mb-0 mt-2">Support Circles are small, focused groups where members can share experiences, 
+            offer encouragement, and work towards common therapeutic goals in a safe, private space.</p>
+        </div>
+        
+        <!-- Circles Grid -->
+        <div class="row" id="circles-grid">
+            {% for circle in circles %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="circle-card h-100">
+                    <div class="circle-header">
+                        <h5 class="mb-1">{{ circle.name }}</h5>
+                        <small>{{ circle.focus_areas }}</small>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <p class="small flex-grow-1">{{ circle.description|truncatechars:150 }}</p>
+                        
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-user-friends me-1"></i>
+                                    {{ circle.active_members }} / {{ circle.max_members }} members
+                                </span>
+                                <span class="badge bg-info">
+                                    {{ circle.get_is_public_display }}
+                                </span>
+                            </div>
+                            
+                            <div class="circle-members mb-3">
+                                <small class="text-muted d-block mb-2">Recent members:</small>
+                                <div class="d-flex">
+                                    {% for member in circle.memberships.all|slice:":5" %}
+                                    <div class="user-avatar small me-2" 
+                                         title="{{ member.user.username }}">
+                                        {{ member.user.username|first|upper }}
+                                    </div>
+                                    {% endfor %}
+                                    {% if circle.active_members > 5 %}
+                                    <div class="user-avatar small bg-secondary" 
+                                         title="+{{ circle.active_members|add:"-5" }} more">
+                                        +{{ circle.active_members|add:"-5" }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                {% if user.is_authenticated %}
+                                    {% if user in circle.members.all %}
+                                    <button class="btn btn-outline-success" disabled>
+                                        <i class="fas fa-check me-2"></i>Already a Member
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-primary" 
+                                            onclick="joinCircle({{ circle.id }})">
+                                        <i class="fas fa-sign-in-alt me-2"></i>Join Circle
+                                    </button>
+                                    {% endif %}
+                                {% else %}
+                                <a href="{% url 'users:login' %}" class="btn btn-primary">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Login to Join
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="social-card text-center py-5">
+                    <i class="fas fa-users-slash fa-3x text-muted mb-3"></i>
+                    <h4>No support circles yet</h4>
+                    <p class="text-muted mb-4">Be the first to create a support circle!</p>
+                    {% if user.is_authenticated %}
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCircleModal">
+                        <i class="fas fa-plus me-2"></i>Create First Circle
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Circle Modal -->
+{% if user.is_authenticated %}
+<div class="modal fade" id="createCircleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-users me-2"></i>Create New Support Circle
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createCircleForm">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="circleName" class="form-label">Circle Name *</label>
+                            <input type="text" class="form-control" id="circleName" required
+                                   placeholder="e.g., Anxiety Support Group">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="maxMembers" class="form-label">Max Members</label>
+                            <input type="number" class="form-control" id="maxMembers" 
+                                   value="20" min="5" max="100">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="focusAreas" class="form-label">Focus Areas</label>
+                        <input type="text" class="form-control" id="focusAreas"
+                               placeholder="e.g., anxiety, depression, stress management, self-care">
+                        <div class="form-text">Separate multiple areas with commas</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="circleDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="circleDescription" rows="4" required
+                                  placeholder="Describe the purpose of this support circle..."></textarea>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="isPublic" checked>
+                                <label class="form-check-label" for="isPublic">
+                                    Public Circle (anyone can see and join)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="allowAnonymous">
+                                <label class="form-check-label" for="allowAnonymous">
+                                    Allow anonymous participation
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="joinCodeSection" style="display: none;">
+                        <label for="joinCode" class="form-label">Join Code</label>
+                        <input type="text" class="form-control" id="joinCode"
+                               placeholder="Create a code for members to join">
+                        <div class="form-text">Required if circle is not public</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createCircle()">
+                    <i class="fas fa-plus me-2"></i>Create Circle
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Toggle join code field based on public setting
+    document.getElementById('isPublic')?.addEventListener('change', function() {
+        const joinCodeSection = document.getElementById('joinCodeSection');
+        if (this.checked) {
+            joinCodeSection.style.display = 'none';
+        } else {
+            joinCodeSection.style.display = 'block';
+        }
+    });
+    
+    // Create new support circle
+    function createCircle() {
+        const name = document.getElementById('circleName').value;
+        const description = document.getElementById('circleDescription').value;
+        const maxMembers = document.getElementById('maxMembers').value;
+        const focusAreas = document.getElementById('focusAreas').value;
+        const isPublic = document.getElementById('isPublic').checked;
+        const allowAnonymous = document.getElementById('allowAnonymous').checked;
+        const joinCode = document.getElementById('joinCode').value;
+        
+        if (!name || !description) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        if (!isPublic && !joinCode) {
+            alert('Please create a join code for private circles');
+            return;
+        }
+        
+        const circleData = {
+            name: name,
+            description: description,
+            max_members: parseInt(maxMembers),
+            focus_areas: focusAreas,
+            is_public: isPublic,
+            allow_anonymous: allowAnonymous,
+            join_code: joinCode || null
+        };
+        
+        fetch('/social/api/circles/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(circleData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                showNotification('Support circle created successfully!', 'success');
+                $('#createCircleModal').modal('hide');
+                document.getElementById('createCircleForm').reset();
+                
+                // Reload page to show new circle
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to create circle');
+            }
+        })
+        .catch(error => {
+            showNotification('Error creating circle: ' + error.message, 'error');
+        });
+    }
+    
+    // Join a support circle
+    function joinCircle(circleId) {
+        if (!confirm('Would you like to join this support circle?')) {
+            return;
+        }
+        
+        fetch(`/social/api/circles/${circleId}/join/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                showNotification('Successfully joined the support circle!', 'success');
+                
+                // Reload page to update UI
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                throw new Error(data.error || 'Failed to join circle');
+            }
+        })
+        .catch(error => {
+            showNotification('Error joining circle: ' + error.message, 'error');
+        });
+    }
+</script>
+{% endblock %}

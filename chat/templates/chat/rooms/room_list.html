@@ -1,0 +1,471 @@
+{% extends "chat/base.html" %}
+{% load static %}
+
+{% block chat_title %}Chat Rooms | Therapeutic Chat{% endblock %}
+
+{% block chat_page_title %}Therapeutic Chat Rooms{% endblock %}
+
+{% block chat_page_subtitle %}Find safe spaces for healing conversations{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'chat/css/room_list.css' %}">
+{% endblock %}
+
+{% block chat_content %}
+<div class="room-list-container">
+    <!-- Room Search and Filters -->
+    <div class="card therapy-card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="room-search">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="roomSearchInput" 
+                                   placeholder="Search rooms by name, description, or therapeutic goal..."
+                                   aria-label="Search rooms">
+                            <button class="btn btn-therapy-primary" type="button" id="roomSearchBtn">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="room-filters">
+                        <div class="filter-buttons">
+                            <button class="btn btn-sm btn-outline-therapy active" data-filter="all">
+                                All Rooms
+                            </button>
+                            <button class="btn btn-sm btn-outline-therapy" data-filter="joined">
+                                My Rooms
+                            </button>
+                            <button class="btn btn-sm btn-outline-therapy" data-filter="safe">
+                                Safe Spaces
+                            </button>
+                            <button class="btn btn-sm btn-outline-therapy" data-filter="active">
+                                Active Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Advanced Filters -->
+            <div class="advanced-filters mt-3 collapse" id="advancedFilters">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Room Type</label>
+                        <select class="form-select" id="roomTypeFilter">
+                            <option value="">All Types</option>
+                            {% for value, label in room_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Safety Level</label>
+                        <select class="form-select" id="safetyLevelFilter">
+                            <option value="">All Levels</option>
+                            {% for value, label in safety_levels %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Max Stress Level</label>
+                        <select class="form-select" id="stressLevelFilter">
+                            <option value="">Any</option>
+                            {% for i in "12345678910"|make_list %}
+                            <option value="{{ forloop.counter }}" 
+                                    {% if forloop.counter >= user.current_stress_level %}selected{% endif %}>
+                                {{ forloop.counter }}+
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">Sort By</label>
+                        <select class="form-select" id="sortByFilter">
+                            <option value="recent">Most Recent</option>
+                            <option value="active">Most Active</option>
+                            <option value="participants">Most Participants</option>
+                            <option value="safest">Safest First</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Therapeutic Features Filter -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="therapeutic-features-filter">
+                            <label class="form-label">Therapeutic Features:</label>
+                            <div class="feature-checkboxes">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="moodTrackingFilter">
+                                    <label class="form-check-label" for="moodTrackingFilter">
+                                        <i class="fas fa-brain"></i> Mood Tracking
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="triggerWarningFilter">
+                                    <label class="form-check-label" for="triggerWarningFilter">
+                                        <i class="fas fa-shield-heart"></i> Trigger Warnings
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="moderatedFilter">
+                                    <label class="form-check-label" for="moderatedFilter">
+                                        <i class="fas fa-user-shield"></i> Moderated
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="therapistFilter">
+                                    <label class="form-check-label" for="therapistFilter">
+                                        <i class="fas fa-user-md"></i> Therapist Support
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Toggle Advanced Filters -->
+            <div class="text-center mt-3">
+                <button class="btn btn-link btn-sm" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#advancedFilters"
+                        aria-expanded="false" 
+                        aria-controls="advancedFilters">
+                    <i class="fas fa-sliders-h"></i>
+                    Advanced Filters
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Room Creation CTA -->
+    <div class="card therapy-card mb-4 room-creation-cta">
+        <div class="card-body text-center">
+            <h4 class="mb-3">Can't find the right space?</h4>
+            <p class="text-muted mb-4">Create your own therapeutic room with custom safety settings</p>
+            <div class="creation-options">
+                <a href="{% url 'chat:room_create' %}" class="btn btn-therapy-primary btn-lg me-3">
+                    <i class="fas fa-plus-circle me-2"></i> Create Custom Room
+                </a>
+                <a href="{% url 'chat:room_templates' %}" class="btn btn-therapy-secondary btn-lg">
+                    <i class="fas fa-magic me-2"></i> Use Template
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Room List -->
+    <div class="rooms-grid" id="roomsGrid">
+        {% for room in rooms %}
+        {% include "chat/components/room_card.html" with room=room %}
+        {% empty %}
+        <div class="no-rooms-found text-center py-5">
+            <i class="fas fa-door-closed fa-3x text-muted mb-3"></i>
+            <h4>No rooms found</h4>
+            <p class="text-muted">Try adjusting your filters or create a new room</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if rooms.has_other_pages %}
+    <nav aria-label="Room pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if rooms.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ rooms.previous_page_number }}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in rooms.paginator.page_range %}
+            {% if rooms.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% else %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            
+            {% if rooms.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ rooms.next_page_number }}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    <!-- Stress-Based Recommendations -->
+    <div class="card therapy-card mt-4 stress-recommendations">
+        <div class="card-header bg-therapy-info text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-brain me-2"></i>
+                Rooms Recommended for Your Stress Level ({{ user.current_stress_level }}/10)
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="recommended-rooms-slider">
+                {% for room in recommended_rooms %}
+                <div class="recommended-room">
+                    <div class="recommended-room-content">
+                        <h6>{{ room.name }}</h6>
+                        <p class="small">{{ room.description|truncatechars:80 }}</p>
+                        <div class="room-stats">
+                            <small class="text-muted">
+                                <i class="fas fa-users"></i> {{ room.participant_count }}
+                            </small>
+                            <span class="badge bg-{% if room.safety_level == 'safe_space' %}success{% else %}info{% endif %} ms-2">
+                                {{ room.get_safety_level_display }}
+                            </span>
+                        </div>
+                        <a href="{% url 'chat:room_detail' room.id %}" class="btn btn-sm btn-therapy-primary mt-2">
+                            <i class="fas fa-door-open"></i> Join
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-3">
+                    <p class="text-muted">No specific recommendations available</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Join Modal -->
+<div class="modal fade" id="quickJoinModal" tabindex="-1" aria-labelledby="quickJoinModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-therapy-primary text-white">
+                <h5 class="modal-title" id="quickJoinModalLabel">
+                    <i class="fas fa-door-open me-2"></i>Join Room
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="quickJoinContent">
+                <!-- Loaded via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_footer_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Room filtering
+        initializeRoomFilters();
+        
+        // Room search
+        initializeRoomSearch();
+        
+        // Quick join functionality
+        initializeQuickJoin();
+        
+        // Initialize slider
+        initializeRecommendationsSlider();
+    });
+    
+    function initializeRoomFilters() {
+        const filterButtons = document.querySelectorAll('[data-filter]');
+        const roomCards = document.querySelectorAll('.room-card');
+        
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Update active button
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                filterRooms(filter);
+            });
+        });
+        
+        // Advanced filters
+        const advancedFilters = document.querySelectorAll('#advancedFilters select, #advancedFilters input');
+        advancedFilters.forEach(filter => {
+            filter.addEventListener('change', function() {
+                applyAdvancedFilters();
+            });
+        });
+    }
+    
+    function filterRooms(filter) {
+        const roomCards = document.querySelectorAll('.room-card');
+        const userStress = {{ user.current_stress_level }};
+        
+        roomCards.forEach(card => {
+            let showCard = true;
+            const roomId = card.dataset.roomId;
+            const isJoined = card.dataset.joined === 'true';
+            const isActive = card.dataset.active === 'true';
+            const isSafe = card.dataset.safety === 'safe_space' || card.dataset.safety === 'supportive';
+            const stressLimit = parseInt(card.dataset.stressLimit);
+            
+            switch(filter) {
+                case 'joined':
+                    showCard = isJoined;
+                    break;
+                case 'safe':
+                    showCard = isSafe;
+                    break;
+                case 'active':
+                    showCard = isActive;
+                    break;
+                case 'stress':
+                    showCard = userStress <= stressLimit;
+                    break;
+                // 'all' shows all cards
+            }
+            
+            card.style.display = showCard ? 'block' : 'none';
+        });
+    }
+    
+    function applyAdvancedFilters() {
+        const roomType = document.getElementById('roomTypeFilter').value;
+        const safetyLevel = document.getElementById('safetyLevelFilter').value;
+        const stressLevel = document.getElementById('stressLevelFilter').value;
+        const sortBy = document.getElementById('sortByFilter').value;
+        
+        const moodTracking = document.getElementById('moodTrackingFilter').checked;
+        const triggerWarning = document.getElementById('triggerWarningFilter').checked;
+        const moderated = document.getElementById('moderatedFilter').checked;
+        const therapist = document.getElementById('therapistFilter').checked;
+        
+        // Build query string
+        let queryParams = [];
+        
+        if (roomType) queryParams.push(`room_type=${roomType}`);
+        if (safetyLevel) queryParams.push(`safety_level=${safetyLevel}`);
+        if (stressLevel) queryParams.push(`max_stress_level=${stressLevel}`);
+        if (sortBy !== 'recent') queryParams.push(`sort=${sortBy}`);
+        
+        if (moodTracking) queryParams.push('mood_tracking=true');
+        if (triggerWarning) queryParams.push('trigger_warnings=true');
+        if (moderated) queryParams.push('moderated=true');
+        if (therapist) queryParams.push('therapist_support=true');
+        
+        // Reload page with filters
+        if (queryParams.length > 0) {
+            window.location.href = `{% url 'chat:room_list' %}?${queryParams.join('&')}`;
+        }
+    }
+    
+    function initializeRoomSearch() {
+        const searchInput = document.getElementById('roomSearchInput');
+        const searchBtn = document.getElementById('roomSearchBtn');
+        
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (query) {
+                window.location.href = `{% url 'chat:room_list' %}?search=${encodeURIComponent(query)}`;
+            }
+        }
+        
+        searchBtn.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+    
+    function initializeQuickJoin() {
+        const quickJoinButtons = document.querySelectorAll('.quick-join-btn');
+        const quickJoinModal = new bootstrap.Modal(document.getElementById('quickJoinModal'));
+        
+        quickJoinButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const roomId = this.dataset.roomId;
+                loadQuickJoinForm(roomId);
+                quickJoinModal.show();
+            });
+        });
+    }
+    
+    function loadQuickJoinForm(roomId) {
+        const content = document.getElementById('quickJoinContent');
+        content.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-therapy-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Loading room details...</p>
+            </div>
+        `;
+        
+        fetch(`/chat/api/rooms/${roomId}/quick-join/`)
+            .then(response => response.text())
+            .then(html => {
+                content.innerHTML = html;
+            })
+            .catch(error => {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Failed to load room details
+                    </div>
+                `;
+            });
+    }
+    
+    function initializeRecommendationsSlider() {
+        // Simple horizontal scroll for recommendations
+        const slider = document.querySelector('.recommended-rooms-slider');
+        if (slider) {
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+            
+            slider.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX - slider.offsetLeft;
+                scrollLeft = slider.scrollLeft;
+            });
+            
+            slider.addEventListener('mouseleave', () => {
+                isDown = false;
+            });
+            
+            slider.addEventListener('mouseup', () => {
+                isDown = false;
+            });
+            
+            slider.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - slider.offsetLeft;
+                const walk = (x - startX) * 2;
+                slider.scrollLeft = scrollLeft - walk;
+            });
+        }
+    }
+</script>
+{% endblock %}

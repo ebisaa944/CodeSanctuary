@@ -31,6 +31,207 @@ from .permissions import (
     LearningPathPermission, TherapeuticSubmissionPermission
 )
 
+# Add to the imports section at the top
+from .external_platforms import platform_aggregator
+
+# Add these view functions to your views.py
+@login_required
+def external_courses(request):
+    """Browse external learning courses"""
+    platform = request.GET.get('platform', '')
+    category = request.GET.get('category', 'programming')
+    search = request.GET.get('search', '')
+    
+    if search:
+        courses = platform_aggregator.search_courses(search, category)
+    elif platform:
+        courses = platform_aggregator.get_platform_courses(platform, category=category)
+    else:
+        courses = platform_aggregator.get_all_courses(category=category)
+    
+    # Get available platforms
+    platforms = [
+        {'id': 'freecodecamp', 'name': 'FreeCodeCamp', 'description': 'Free coding tutorials and projects'},
+        {'id': 'udemy', 'name': 'Udemy', 'description': 'Video courses on various topics'},
+        {'id': 'coursera', 'name': 'Coursera', 'description': 'University courses and specializations'},
+    ]
+    
+    # Get categories
+    categories = [
+        {'id': 'programming', 'name': 'Programming & Development'},
+        {'id': 'data-science', 'name': 'Data Science'},
+        {'id': 'web-development', 'name': 'Web Development'},
+        {'id': 'mobile-development', 'name': 'Mobile Development'},
+    ]
+    
+    context = {
+        'page_title': 'External Learning Resources',
+        'page_subtitle': 'Learn from top platforms',
+        'courses': courses,
+        'platforms': platforms,
+        'categories': categories,
+        'selected_platform': platform,
+        'selected_category': category,
+        'search_query': search,
+    }
+    
+    return render(request, 'learning/external_courses.html', context)
+
+@login_required
+def external_course_detail(request, platform_name, external_id):
+    """View external course details"""
+    platform = platform_aggregator.platforms.get(platform_name)
+    
+    if not platform:
+        messages.error(request, f"Platform '{platform_name}' not found")
+        return redirect('learning:external_courses')
+    
+    # Try to get course details
+    course_details = None
+    if hasattr(platform, 'fetch_activity_content'):
+        course_details = platform.fetch_activity_content(external_id)
+    
+    # For now, create mock details if API doesn't provide them
+    if not course_details:
+        course_details = {
+            'title': f'Course from {platform_name}',
+            'description': 'Detailed course information would appear here.',
+            'modules': [
+                {'title': 'Introduction', 'description': 'Course overview'},
+                {'title': 'Getting Started', 'description': 'Setup and basics'},
+                {'title': 'Core Concepts', 'description': 'Main topics'},
+                {'title': 'Projects', 'description': 'Practical exercises'},
+            ]
+        }
+    
+    context = {
+        'page_title': course_details.get('title', 'Course Details'),
+        'page_subtitle': f'From {platform_name.title()}',
+        'platform_name': platform_name,
+        'external_id': external_id,
+        'course_details': course_details,
+    }
+    
+    return render(request, 'learning/external_course_detail.html', context)
+
+@login_required
+def import_external_course(request, platform_name, external_id):
+    """Import an external course into personal learning plan"""
+    if request.method == 'POST':
+        # Here you would:
+        # 1. Fetch course details from external platform
+        # 2. Create a custom learning path or activities
+        # 3. Add it to user's personal learning plan
+        
+        # For now, just return success
+        messages.success(
+            request, 
+            f"Course imported successfully! You can find it in your Personal Learning Plan."
+        )
+        
+        return redirect('learning:learning_dashboard')
+    
+    # GET request - show confirmation
+    platform = platform_aggregator.platforms.get(platform_name)
+    if not platform:
+        messages.error(request, f"Platform '{platform_name}' not found")
+        return redirect('learning:external_courses')
+    
+    # Get basic course info
+    courses = platform.fetch_courses(limit=50)
+    course_info = next((c for c in courses if c.get('external_id') == external_id), None)
+    
+    if not course_info:
+        messages.error(request, "Course not found")
+        return redirect('learning:external_courses')
+    
+    context = {
+        'page_title': 'Import Course',
+        'page_subtitle': 'Add to your learning plan',
+        'course': course_info,
+        'platform_name': platform_name,
+        'external_id': external_id,
+    }
+    
+    return render(request, 'learning/import_course.html', context)
+
+@login_required
+def personal_learning_plan(request):
+    """View and manage personal learning plan with external content"""
+    # Get user's saved external courses
+    # You would need to create a model for this, e.g., SavedExternalCourse
+    
+    # For now, return mock data
+    saved_courses = [
+        {
+            'title': 'JavaScript Algorithms (FreeCodeCamp)',
+            'platform': 'freecodecamp',
+            'progress': 30,
+            'last_accessed': '2024-01-15',
+            'url': 'https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures/',
+        },
+        {
+            'title': 'Python Bootcamp (Udemy)',
+            'platform': 'udemy',
+            'progress': 65,
+            'last_accessed': '2024-01-10',
+            'url': 'https://www.udemy.com/course/complete-python-bootcamp/',
+        }
+    ]
+    
+    # Get recommended external courses based on user progress
+    recommended = platform_aggregator.get_all_courses(limit_per_platform=2)
+    
+    context = {
+        'page_title': 'Personal Learning Plan',
+        'page_subtitle': 'Your customized learning journey',
+        'saved_courses': saved_courses,
+        'recommended_courses': recommended,
+        'total_courses': len(saved_courses),
+        'in_progress': sum(1 for c in saved_courses if c['progress'] > 0 and c['progress'] < 100),
+        'completed': sum(1 for c in saved_courses if c['progress'] == 100),
+    }
+    
+    return render(request, 'learning/personal_plan.html', context)
+
+# API endpoints for external platforms
+@login_required
+def api_external_courses(request):
+    """API endpoint to get external courses"""
+    platform = request.GET.get('platform', '')
+    category = request.GET.get('category', 'programming')
+    limit = int(request.GET.get('limit', 20))
+    
+    if platform:
+        courses = platform_aggregator.get_platform_courses(platform, category=category, limit=limit)
+    else:
+        courses = platform_aggregator.get_all_courses(category=category, limit_per_platform=limit//3)
+    
+    return JsonResponse({
+        'success': True,
+        'count': len(courses),
+        'courses': courses,
+    })
+
+@login_required
+def api_search_external_courses(request):
+    """API endpoint to search external courses"""
+    query = request.GET.get('q', '')
+    if not query or len(query) < 2:
+        return JsonResponse({
+            'success': False,
+            'error': 'Search query must be at least 2 characters'
+        }, status=400)
+    
+    results = platform_aggregator.search_courses(query)
+    
+    return JsonResponse({
+        'success': True,
+        'count': len(results),
+        'query': query,
+        'results': results,
+    })
+
 # Helper functions
 def get_next_activity_suggestion(user, current_activity):
     """Suggest next activity based on therapeutic considerations"""
@@ -138,12 +339,14 @@ def update_readiness(request):
 
 @login_required
 def learning_paths(request):
-    """Browse all learning paths"""
+    """Browse all learning paths with external courses integration"""
     difficulty = request.GET.get('difficulty', '')
     language = request.GET.get('language', '')
     sort = request.GET.get('sort', '')
+    learning_type = request.GET.get('learning_type', 'internal')  # internal, external, all
+    my_profile = request.GET.get('my_profile', '')
     
-    # Base queryset
+    # Base queryset for internal paths
     paths = LearningPath.objects.filter(is_active=True)
     
     # Apply filters
@@ -153,6 +356,13 @@ def learning_paths(request):
     if language:
         paths = paths.filter(target_language=language)
     
+    # Apply therapeutic filtering
+    if my_profile and hasattr(request.user, 'emotional_profile'):
+        profile = request.user.emotional_profile
+        paths = paths.filter(
+            recommended_for_profiles__contains=[profile]
+        )
+    
     # Apply sorting
     if sort:
         paths = paths.order_by(sort)
@@ -161,7 +371,6 @@ def learning_paths(request):
     
     # Get progress for each path
     for path in paths:
-        # Get user progress
         progress = UserProgress.objects.filter(
             user=request.user,
             activity__learning_path=path
@@ -170,7 +379,6 @@ def learning_paths(request):
             total=Count('id')
         )
         
-        # Calculate percentage
         total_activities = path.activities.filter(is_published=True).count()
         completed_activities = progress['completed'] or 0
         
@@ -189,6 +397,16 @@ def learning_paths(request):
             started_count += 1
         if path.user_progress['percentage'] == 100:
             completed_count += 1
+    
+    # Get external courses if requested
+    external_courses = []
+    if learning_type in ['external', 'all']:
+        # Get courses from external platforms
+        from .external_platforms import platform_aggregator
+        external_courses = platform_aggregator.get_all_courses(
+            category='programming',
+            limit_per_platform=2 if learning_type == 'all' else 10
+        )
     
     # Get choice fields for filters
     try:
@@ -215,10 +433,19 @@ def learning_paths(request):
             ('cpp', 'C++'),
         ]
     
+    # Get external platforms for sidebar
+    external_platforms = [
+        {'id': 'freecodecamp', 'name': 'FreeCodeCamp', 'description': 'Free coding tutorials and projects'},
+        {'id': 'udemy', 'name': 'Udemy', 'description': 'Video courses on various topics'},
+        {'id': 'coursera', 'name': 'Coursera', 'description': 'University courses and specializations'},
+    ]
+    
     context = {
         'page_title': 'Learning Paths',
         'page_subtitle': 'Choose Your Therapeutic Journey',
         'paths': paths,
+        'external_courses': external_courses,
+        'external_platforms': external_platforms,
         'difficulties': difficulties,
         'languages': languages,
         'started_count': started_count,

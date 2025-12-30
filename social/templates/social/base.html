@@ -1,0 +1,423 @@
+<!-- social/templates/social/base.html - CORRECTED VERSION -->
+{% extends 'therapy/base.html' %}
+
+{% block title %}{% block social_title %}Community Home - Therapeutic Social{% endblock %}{% endblock %}
+
+{% block content %}
+    {% block social_content %}
+    <div class="row">
+        <!-- Left Column: Main Feed -->
+        <div class="col-lg-8">
+            <!-- Welcome Card -->
+            <div class="card social-card mb-4">
+                <div class="social-card-header">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar large me-3">
+                            {% if user.is_authenticated %}
+                                {{ user.username|first|upper }}
+                            {% else %}
+                                <i class="fas fa-user"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h4 class="mb-1">
+                                Welcome to the Therapeutic Social Community
+                            </h4>
+                            <p class="text-muted mb-0">
+                                A safe space for support, encouragement, and growth
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if user.is_authenticated %}
+                    <div class="therapeutic-message">
+                        <h5><i class="fas fa-heart text-danger me-2"></i>How are you feeling today?</h5>
+                        <p class="mb-3">Share your thoughts, ask for support, or offer encouragement to others.</p>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" onclick="window.location.href='#create-post'">
+                                <i class="fas fa-plus me-2"></i>Share Something
+                            </button>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="encouragement-message">
+                        <h5><i class="fas fa-door-open me-2"></i>Join Our Supportive Community</h5>
+                        <p>Create an account to participate in discussions, join support circles, and earn therapeutic achievements.</p>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <a href="{% url 'users:register' %}" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Register
+                            </a>
+                            <a href="{% url 'users:login' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Interactions -->
+            <div id="interactions" class="mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Recent Interactions
+                    </h3>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadMoreInteractions()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Interaction Feed -->
+                <div id="interaction-feed">
+                    {% for interaction in recent_interactions|slice:":5" %}
+                    <div class="social-card interaction-{{ interaction.interaction_type }}">
+                        <div class="d-flex align-items-start mb-3">
+                            {% if interaction.sender and not interaction.anonymous %}
+                            <div class="user-avatar me-3">
+                                {{ interaction.sender.username|first|upper }}
+                            </div>
+                            {% else %}
+                            <div class="user-avatar me-3 badge-anonymous">
+                                <i class="fas fa-user-secret"></i>
+                            </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-1">
+                                        {% if interaction.sender and not interaction.anonymous %}
+                                            {{ interaction.sender.username }}
+                                        {% else %}
+                                            <span class="text-muted">Anonymous User</span>
+                                        {% endif %}
+                                        <small class="text-muted ms-2">
+                                            {{ interaction.created_at|timesince }} ago
+                                        </small>
+                                    </h5>
+                                    <span class="badge badge-{{ interaction.interaction_type }}">
+                                        {{ interaction.get_interaction_type_display }}
+                                    </span>
+                                </div>
+                                
+                                {% if interaction.title %}
+                                <h6 class="text-primary mb-2">{{ interaction.title }}</h6>
+                                {% endif %}
+                                
+                                <p class="mb-3">{{ interaction.message|truncatechars:300 }}</p>
+                                
+                                <!-- Interaction Stats -->
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if interaction.interaction_type == 'encouragement' %}
+                                        <span class="badge bg-success me-2">
+                                            <i class="fas fa-heart me-1"></i>Encouragement
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if interaction.visibility == 'community' %}
+                                        <span class="badge bg-info me-2">
+                                            <i class="fas fa-users me-1"></i>Community
+                                        </span>
+                                        {% endif %}
+                                        
+                                        <span class="text-muted small">
+                                            <i class="fas fa-chart-line me-1"></i>
+                                            Score: {{ interaction.therapeutic_impact_score }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-outline-primary like-btn" data-id="{{ interaction.id }}">
+                                            <i class="fas fa-thumbs-up me-1"></i>
+                                            Like <span class="badge bg-secondary">{{ interaction.likes_count }}</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary ms-2 reply-btn" data-id="{{ interaction.id }}">
+                                            <i class="fas fa-reply me-1"></i>Reply
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="social-card text-center py-5">
+                        <i class="fas fa-comments-slash fa-3x text-muted mb-3"></i>
+                        <h4>No interactions yet</h4>
+                        <p class="text-muted">Be the first to share something with the community!</p>
+                        {% if user.is_authenticated %}
+                        <button class="btn btn-primary" onclick="window.location.href='#create-post'">
+                            <i class="fas fa-plus me-2"></i>Create First Post
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Sidebar -->
+        <div class="col-lg-4">
+            <!-- Community Stats -->
+            <div class="card social-card mb-4">
+                <div class="social-card-header">
+                    <h4><i class="fas fa-chart-bar me-2"></i>Community Stats</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="stat-widget">
+                                <div class="stat-number">{{ community_stats.total_members }}</div>
+                                <div class="stat-label">Members</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="stat-widget">
+                                <div class="stat-number">{{ community_stats.today_interactions }}</div>
+                                <div class="stat-label">Today's Posts</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-widget">
+                                <div class="stat-number">{{ community_stats.active_circles }}</div>
+                                <div class="stat-label">Support Circles</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-widget">
+                                <div class="stat-number">{{ community_stats.total_encouragements }}</div>
+                                <div class="stat-label">Encouragements</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Support Circles -->
+            <div id="circles" class="mb-4">
+                <h4 class="mb-3">
+                    <i class="fas fa-users me-2"></i>Active Support Circles
+                </h4>
+                
+                {% for circle in active_circles|slice:":3" %}
+                <div class="circle-card mb-3">
+                    <div class="circle-header">
+                        <h5 class="mb-1">{{ circle.name }}</h5>
+                        <small>{{ circle.focus_areas }}</small>
+                    </div>
+                    <div class="card-body">
+                        <p class="small mb-3">{{ circle.description|truncatechars:100 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">
+                                <i class="fas fa-user-friends me-1"></i>
+                                {{ circle.active_members }} members
+                            </span>
+                            <button class="btn btn-sm btn-outline-primary" 
+                                    onclick="window.location.href='{% url 'social:circle_join' pk=circle.id %}'">
+                                <i class="fas fa-sign-in-alt me-1"></i>Join
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="card social-card">
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-users-slash fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No support circles yet</p>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if active_circles|length > 3 %}
+                <div class="text-center mt-3">
+                    <a href="{% url 'social:circles_list' %}" class="btn btn-outline-primary btn-sm">
+                        View All Circles
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Recent Achievements -->
+            <div id="achievements">
+                <h4 class="mb-3">
+                    <i class="fas fa-trophy me-2"></i>Recent Achievements
+                </h4>
+                
+                {% for user_achievement in recent_achievements|slice:":3" %}
+                <div class="social-card mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="badge-achievement p-3 me-3">
+                            <i class="fas fa-trophy fa-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ user_achievement.achievement.name }}</h6>
+                            <p class="small text-muted mb-1">
+                                Earned by {{ user_achievement.user.username }}
+                            </p>
+                            <small class="text-muted">
+                                {{ user_achievement.earned_at|timesince }} ago
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="social-card">
+                    <div class="card-body text-center py-4">
+                        <i class="fas fa-star fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">No achievements earned yet</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Post Section -->
+    {% if user.is_authenticated %}
+    <div id="create-post" class="mt-5 pt-5">
+        <div class="social-card">
+            <div class="social-card-header">
+                <h4><i class="fas fa-edit me-2"></i>Share with the Community</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'social:quick_encouragement' %}" id="createPostForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="postType" class="form-label">What would you like to share?</label>
+                        <select class="form-select" id="postType" name="interaction_type">
+                            <option value="encouragement">Encouragement</option>
+                            <option value="question">Question</option>
+                            <option value="share">Personal Share</option>
+                            <option value="support">Request Support</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="postTitle" class="form-label">Title (optional)</label>
+                        <input type="text" class="form-control" id="postTitle" name="title" 
+                               placeholder="Give your post a title...">
+                    </div>
+                    <div class="mb-3">
+                        <label for="postMessage" class="form-label">Your message</label>
+                        <textarea class="form-control" id="postMessage" name="message" 
+                                  rows="4" placeholder="Share your thoughts..."></textarea>
+                        <div class="form-text">
+                            This is a safe space. Be kind to yourself and others.
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="postVisibility" class="form-label">Visibility</label>
+                            <select class="form-select" id="postVisibility" name="visibility">
+                                <option value="community">Community (all members)</option>
+                                <option value="public">Public (anyone can see)</option>
+                                {% if user.is_authenticated %}
+                                <option value="circle">My Support Circles Only</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mt-4 pt-3">
+                                <input class="form-check-input" type="checkbox" id="allowReplies" name="allow_replies" checked>
+                                <label class="form-check-label" for="allowReplies">
+                                    Allow replies
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="postAnonymously" name="anonymous">
+                            <label class="form-check-label" for="postAnonymously">
+                                Post anonymously
+                            </label>
+                        </div>
+                        <div>
+                            <button type="reset" class="btn btn-outline-secondary me-2">Clear</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Share with Community
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endblock %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Load more interactions function
+    function loadMoreInteractions() {
+        const feed = document.getElementById('interaction-feed');
+        const spinner = document.createElement('div');
+        spinner.className = 'text-center py-3';
+        spinner.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+        feed.appendChild(spinner);
+        
+        // Simulate loading more interactions
+        setTimeout(() => {
+            spinner.remove();
+            // In a real app, this would be an AJAX call to load more interactions
+            alert('Loading more interactions... (This would be an API call in production)');
+        }, 1000);
+    }
+    
+    // Create post form submission
+    document.getElementById('createPostForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const jsonData = {};
+        formData.forEach((value, key) => {
+            jsonData[key] = value;
+        });
+        
+        // Add therapeutic intent based on post type
+        const postType = jsonData.interaction_type;
+        const therapeuticIntents = {
+            'encouragement': 'To offer support and encouragement',
+            'question': 'To seek guidance and understanding',
+            'share': 'To share experiences and connect',
+            'support': 'To request support and understanding'
+        };
+        
+        jsonData.therapeutic_intent = therapeuticIntents[postType] || 'To connect with the community';
+        
+        fetch(this.action, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': jsonData.csrfmiddlewaretoken
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            if (response.ok) {
+                showNotification('Your post has been shared with the community!', 'success');
+                this.reset();
+                
+                // Scroll to top to see new post
+                setTimeout(() => {
+                    window.scrollTo({top: 0, behavior: 'smooth'});
+                    location.reload();
+                }, 1500);
+            } else {
+                throw new Error('Failed to create post');
+            }
+        })
+        .catch(error => {
+            showNotification('Error creating post. Please try again.', 'error');
+            console.error('Error:', error);
+        });
+    });
+    
+    // Auto-resize textarea
+    document.getElementById('postMessage')?.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+</script>
+{% endblock %}

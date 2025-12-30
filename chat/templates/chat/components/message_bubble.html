@@ -1,0 +1,198 @@
+<div class="message-bubble {% if message.user.id == user.id %}own-message{% endif %} 
+                          {% if message.is_vulnerable_share %}vulnerable-message{% endif %}"
+     data-message-id="{{ message.id }}"
+     data-user-id="{{ message.user.id }}">
+    
+    <!-- Message Header -->
+    <div class="message-header">
+        {% if not message.is_anonymous or message.user.id == user.id %}
+        <div class="message-avatar" style="background-color: {{ message.user.avatar_color }};">
+            {{ message.user.username|first|upper }}
+        </div>
+        {% endif %}
+        
+        <div class="message-info">
+            <div class="message-sender">
+                {% if message.is_anonymous and message.user.id != user.id %}
+                <span class="anonymous-label">
+                    <i class="fas fa-user-secret"></i> Anonymous User
+                </span>
+                {% else %}
+                <strong>{{ message.user.username }}</strong>
+                {% endif %}
+                
+                {% if message.user.current_stress_level >= 7 %}
+                <span class="stress-badge" title="High stress level">
+                    <i class="fas fa-heartbeat"></i> {{ message.user.current_stress_level }}/10
+                </span>
+                {% endif %}
+            </div>
+            
+            <div class="message-meta">
+                <small class="text-muted">{{ message.created_at|timesince }} ago</small>
+                
+                {% if message.edited %}
+                <small class="text-muted ms-2">
+                    <i class="fas fa-edit"></i> edited
+                </small>
+                {% endif %}
+                
+                {% if message.is_vulnerable_share %}
+                <span class="vulnerable-badge ms-2">
+                    <i class="fas fa-shield-heart"></i> Vulnerable Share
+                </span>
+                {% endif %}
+                
+                {% if message.contains_affirmation %}
+                <span class="affirmation-badge ms-2">
+                    <i class="fas fa-heart"></i> Affirmation
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Message Actions Menu -->
+        {% if message.user.id == user.id or user in message.room.moderators.all %}
+        <div class="message-actions-menu">
+            <button class="btn btn-sm btn-link" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end">
+                {% if message.user.id == user.id %}
+                <button class="dropdown-item edit-message-btn" data-message-id="{{ message.id }}">
+                    <i class="fas fa-edit me-2"></i> Edit
+                </button>
+                {% endif %}
+                
+                <button class="dropdown-item copy-message-btn" data-message-id="{{ message.id }}">
+                    <i class="fas fa-copy me-2"></i> Copy
+                </button>
+                
+                <button class="dropdown-item report-message-btn" data-message-id="{{ message.id }}">
+                    <i class="fas fa-flag me-2"></i> Report
+                </button>
+                
+                {% if message.user.id == user.id or user in message.room.moderators.all %}
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item text-danger delete-message-btn" data-message-id="{{ message.id }}">
+                    <i class="fas fa-trash me-2"></i> Delete
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Trigger Warning (if present) -->
+    {% if message.trigger_warning %}
+    <div class="trigger-warning-alert" role="alert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>Trigger Warning:</strong> {{ message.trigger_warning }}
+        <button class="btn btn-sm btn-outline-warning ms-2" 
+                type="button" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#messageContent-{{ message.id }}">
+            Show Content
+        </button>
+    </div>
+    {% endif %}
+    
+    <!-- Message Content -->
+    <div class="message-content {% if message.trigger_warning %}collapse{% endif %}" 
+         id="messageContent-{{ message.id }}">
+        <p>{{ message.content|linebreaksbr }}</p>
+        
+        <!-- Emotional Tone Indicator -->
+        {% if message.emotional_tone %}
+        <div class="emotional-tone-indicator">
+            <small class="text-muted">
+                <i class="fas fa-smile"></i> Feeling: {{ message.emotional_tone|title }}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Message Reactions -->
+    <div class="message-reactions">
+        {% for reaction in message.reactions.all|slice:":5" %}
+        <span class="reaction-badge" 
+              title="{{ reaction.user.username }} reacted {{ reaction.get_reaction_type_display }}">
+            {{ reaction.reaction_type }}
+            <small>{{ reaction.count }}</small>
+        </span>
+        {% endfor %}
+        
+        {% if message.reactions.count > 5 %}
+        <span class="reaction-more" 
+              data-bs-toggle="tooltip" 
+              title="{% for reaction in message.reactions.all %}{{ reaction.user.username }}: {{ reaction.reaction_type }}&#10;{% endfor %}">
+            +{{ message.reactions.count|add:"-5" }}
+        </span>
+        {% endif %}
+        
+        <!-- Add Reaction Button -->
+        <button class="btn btn-sm btn-link add-reaction-btn" 
+                data-message-id="{{ message.id }}"
+                data-bs-toggle="dropdown">
+            <i class="fas fa-smile"></i>
+        </button>
+        <div class="dropdown-menu reaction-options">
+            <div class="reaction-options-grid">
+                <button class="reaction-option" data-reaction="❤️">❤️</button>
+                <button class="reaction-option" data-reaction="🤗">🤗</button>
+                <button class="reaction-option" data-reaction="✅">✅</button>
+                <button class="reaction-option" data-reaction="⭐">⭐</button>
+                <button class="reaction-option" data-reaction="💡">💡</button>
+                <button class="reaction-option" data-reaction="👏">👏</button>
+                <button class="reaction-option" data-reaction="🚀">🚀</button>
+                <button class="reaction-option" data-reaction="🌱">🌱</button>
+                <button class="reaction-option" data-reaction="🛡️">🛡️</button>
+                <button class="reaction-option" data-reaction="⚠️">⚠️</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Thread Replies (if any) -->
+    {% if message.replies.count > 0 %}
+    <div class="thread-replies">
+        <button class="btn btn-sm btn-link view-thread-btn" 
+                data-message-id="{{ message.id }}"
+                data-bs-toggle="collapse" 
+                data-bs-target="#thread-{{ message.id }}">
+            <i class="fas fa-comments"></i>
+            {{ message.replies.count }} repl{{ message.replies.count|pluralize:"y,ies" }}
+        </button>
+        
+        <div class="collapse thread-collapse" id="thread-{{ message.id }}">
+            <div class="thread-replies-container">
+                {% for reply in message.replies.all|slice:":3" %}
+                {% include "chat/components/message_bubble.html" with message=reply %}
+                {% endfor %}
+                
+                {% if message.replies.count > 3 %}
+                <div class="text-center mt-2">
+                    <a href="{% url 'chat:message_thread' message.id %}" class="btn btn-sm btn-outline-therapy">
+                        View all {{ message.replies.count }} replies
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- Reply Input -->
+                <div class="thread-reply-input mt-3">
+                    <form class="thread-reply-form" data-parent-id="{{ message.id }}">
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control form-control-sm" 
+                                   placeholder="Write a reply..."
+                                   aria-label="Reply to message">
+                            <button class="btn btn-sm btn-therapy-primary" type="submit">
+                                <i class="fas fa-reply"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>

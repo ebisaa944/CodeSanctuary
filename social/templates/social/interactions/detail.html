@@ -1,0 +1,439 @@
+{% extends 'social/base.html' %}
+{% load static %}
+
+{% block social_title %}{{ interaction.title|default:"Interaction" }} - Therapeutic Social{% endblock %}
+
+{% block social_content %}
+<div class="row">
+    <!-- Main Interaction -->
+    <div class="col-lg-8">
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="{% url 'community-home' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Community
+            </a>
+        </div>
+
+        <!-- Interaction Card -->
+        <div class="social-card interaction-{{ interaction.interaction_type }}">
+            <div class="d-flex align-items-start mb-3">
+                {% if interaction.sender and not interaction.anonymous %}
+                <div class="user-avatar large me-3">
+                    {{ interaction.sender.username|first|upper }}
+                </div>
+                {% else %}
+                <div class="user-avatar large me-3 badge-anonymous">
+                    <i class="fas fa-user-secret"></i>
+                </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <h4 class="mb-1">
+                                {% if interaction.sender and not interaction.anonymous %}
+                                    {{ interaction.sender.username }}
+                                {% else %}
+                                    <span class="text-muted">Anonymous User</span>
+                                {% endif %}
+                                {% if interaction.sender == user %}
+                                <span class="badge bg-info ms-2">You</span>
+                                {% endif %}
+                            </h4>
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ interaction.created_at|date:"F j, Y, g:i a" }}
+                            </small>
+                        </div>
+                        <div>
+                            <span class="badge badge-{{ interaction.interaction_type }}">
+                                {{ interaction.get_interaction_type_display }}
+                            </span>
+                            {% if interaction.visibility == 'public' %}
+                            <span class="badge bg-success ms-1">
+                                <i class="fas fa-globe"></i> Public
+                            </span>
+                            {% elif interaction.visibility == 'community' %}
+                            <span class="badge bg-info ms-1">
+                                <i class="fas fa-users"></i> Community
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if interaction.title %}
+                    <h3 class="mb-3 text-primary">{{ interaction.title }}</h3>
+                    {% endif %}
+                    
+                    <div class="interaction-content mb-4">
+                        <div style="white-space: pre-line; font-size: 1.1rem; line-height: 1.6;">
+                            {{ interaction.message }}
+                        </div>
+                        
+                        {% if interaction.therapeutic_intent %}
+                        <div class="therapeutic-message mt-3">
+                            <strong>Therapeutic Intent:</strong>
+                            {{ interaction.therapeutic_intent }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Interaction Stats -->
+                    <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                        <div class="d-flex align-items-center">
+                            <!-- Therapeutic Impact -->
+                            <div class="me-4">
+                                <small class="text-muted d-block">Therapeutic Impact</small>
+                                <div class="progress" style="width: 100px; height: 8px;">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: {{ interaction.therapeutic_impact_score }}%">
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ interaction.therapeutic_impact_score }}/100</small>
+                            </div>
+                            
+                            <!-- Interaction Stats -->
+                            <div class="d-flex">
+                                <div class="text-center me-4">
+                                    <div class="h5 mb-0">{{ interaction.likes_count }}</div>
+                                    <small class="text-muted">Likes</small>
+                                </div>
+                                <div class="text-center me-4">
+                                    <div class="h5 mb-0">{{ interaction.replies.count }}</div>
+                                    <small class="text-muted">Replies</small>
+                                </div>
+                                <div class="text-center">
+                                    <div class="h5 mb-0">{{ interaction.views_count|default:0 }}</div>
+                                    <small class="text-muted">Views</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="btn-group" role="group">
+                            {% if user.is_authenticated %}
+                            <button class="btn btn-outline-primary like-btn" 
+                                    data-id="{{ interaction.id }}"
+                                    {% if user_likes %}data-liked="true"{% endif %}>
+                                <i class="fas fa-thumbs-up me-1"></i>
+                                <span class="like-text">
+                                    {% if user_likes %}Liked{% else %}Like{% endif %}
+                                </span>
+                            </button>
+                            
+                            {% if interaction.allow_replies %}
+                            <button class="btn btn-outline-secondary ms-2" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#replyForm">
+                                <i class="fas fa-reply me-1"></i>Reply
+                            </button>
+                            {% endif %}
+                            
+                            {% if interaction.sender == user %}
+                            <div class="dropdown ms-2">
+                                <button class="btn btn-outline-secondary dropdown-toggle" 
+                                        type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-h"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="#">
+                                            <i class="fas fa-edit me-2"></i>Edit
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#">
+                                            <i class="fas fa-trash me-2"></i>Delete
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reply Form -->
+        {% if interaction.allow_replies and user.is_authenticated %}
+        <div class="collapse mt-4" id="replyForm">
+            <div class="social-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-reply me-2"></i>Write a Reply
+                </h5>
+                <form id="replyFormContent">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <textarea class="form-control" id="replyMessage" 
+                                  rows="3" placeholder="Share your thoughts..."></textarea>
+                        <div class="form-text">Keep your reply supportive and constructive.</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="replyAnonymous">
+                            <label class="form-check-label" for="replyAnonymous">
+                                Reply anonymously
+                            </label>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#replyForm">
+                                Cancel
+                            </button>
+                            <button type="button" class="btn btn-primary ms-2" 
+                                    onclick="submitReply()">
+                                <i class="fas fa-paper-plane me-2"></i>Post Reply
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Replies Section -->
+        <div class="mt-5">
+            <h4 class="mb-4">
+                <i class="fas fa-comments me-2"></i>
+                Replies ({{ replies.count }})
+            </h4>
+            
+            {% if replies %}
+                {% for reply in replies %}
+                <div class="social-card mb-3 ms-4">
+                    <div class="d-flex align-items-start">
+                        {% if reply.anonymous %}
+                        <div class="user-avatar me-3 badge-anonymous">
+                            <i class="fas fa-user-secret"></i>
+                        </div>
+                        {% else %}
+                        <div class="user-avatar me-3">
+                            {{ reply.sender.username|first|upper }}
+                        </div>
+                        {% endif %}
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h6 class="mb-0">
+                                        {% if reply.anonymous %}
+                                        <span class="text-muted">Anonymous User</span>
+                                        {% else %}
+                                        {{ reply.sender.username }}
+                                        {% endif %}
+                                    </h6>
+                                    <small class="text-muted">
+                                        {{ reply.created_at|timesince }} ago
+                                    </small>
+                                </div>
+                                {% if reply.sender == user %}
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="#">
+                                                <i class="fas fa-edit me-2"></i>Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#">
+                                                <i class="fas fa-trash me-2"></i>Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div style="white-space: pre-line;">
+                                {{ reply.message }}
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary like-btn" 
+                                        data-id="{{ reply.id }}">
+                                    <i class="fas fa-thumbs-up me-1"></i>
+                                    Like
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="social-card text-center py-4">
+                <i class="fas fa-comments-slash fa-2x text-muted mb-3"></i>
+                <h5>No replies yet</h5>
+                <p class="text-muted">Be the first to respond to this interaction</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Interaction Info -->
+        <div class="social-card mb-4">
+            <h5 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>Interaction Info
+            </h5>
+            <div class="mb-3">
+                <small class="text-muted d-block">Interaction Type</small>
+                <span class="badge badge-{{ interaction.interaction_type }}">
+                    {{ interaction.get_interaction_type_display }}
+                </span>
+            </div>
+            <div class="mb-3">
+                <small class="text-muted d-block">Visibility</small>
+                <span class="badge bg-{% if interaction.visibility == 'public' %}success{% else %}info{% endif %}">
+                    {{ interaction.get_visibility_display }}
+                </span>
+            </div>
+            {% if interaction.expires_at %}
+            <div class="mb-3">
+                <small class="text-muted d-block">Expires</small>
+                <div>{{ interaction.expires_at|date:"F j, Y, g:i a" }}</div>
+                <small class="text-muted">
+                    ({{ interaction.expires_at|timeuntil }} remaining)
+                </small>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <small class="text-muted d-block">Created</small>
+                <div>{{ interaction.created_at|date:"F j, Y, g:i a" }}</div>
+            </div>
+            {% if interaction.updated_at != interaction.created_at %}
+            <div>
+                <small class="text-muted d-block">Last Updated</small>
+                <div>{{ interaction.updated_at|date:"F j, Y, g:i a" }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Similar Interactions -->
+        <div class="social-card">
+            <h5 class="mb-3">
+                <i class="fas fa-share-alt me-2"></i>Similar Interactions
+            </h5>
+            {% if similar_interactions %}
+                {% for similar in similar_interactions|slice:":3" %}
+                <div class="mb-3 pb-3 border-bottom">
+                    <a href="{% url 'interaction-detail' similar.id %}" 
+                       class="text-decoration-none">
+                        <h6 class="mb-1">{{ similar.title|default:"Untitled" }}</h6>
+                    </a>
+                    <small class="text-muted d-block mb-1">
+                        {{ similar.sender.username|default:"Anonymous" }} • 
+                        {{ similar.created_at|timesince }} ago
+                    </small>
+                    <div class="d-flex justify-content-between">
+                        <span class="badge badge-{{ similar.interaction_type }}">
+                            {{ similar.get_interaction_type_display }}
+                        </span>
+                        <small class="text-muted">
+                            {{ similar.likes_count }} likes
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <p class="text-muted">No similar interactions found</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Like functionality
+    document.querySelectorAll('.like-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const interactionId = this.dataset.id;
+            const isReply = this.closest('.social-card.ms-4') !== null;
+            const endpoint = isReply ? `/api/replies/${interactionId}/like/` 
+                                   : `/api/interactions/${interactionId}/like/`;
+            
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update button state
+                    const likeText = this.querySelector('.like-text');
+                    if (likeText) {
+                        likeText.textContent = data.liked ? 'Liked' : 'Like';
+                    }
+                    
+                    // Update count if available
+                    const countElement = this.closest('.d-flex')?.querySelector('.h5');
+                    if (countElement) {
+                        const currentCount = parseInt(countElement.textContent);
+                        countElement.textContent = data.liked ? currentCount + 1 : currentCount - 1;
+                    }
+                    
+                    // Visual feedback
+                    this.classList.toggle('btn-primary', data.liked);
+                    this.classList.toggle('btn-outline-primary', !data.liked);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to like. Please try again.');
+            });
+        });
+    });
+    
+    // Submit reply
+    function submitReply() {
+        const message = document.getElementById('replyMessage').value;
+        const anonymous = document.getElementById('replyAnonymous').checked;
+        
+        if (!message.trim()) {
+            alert('Please enter a reply message');
+            return;
+        }
+        
+        fetch(`/api/interactions/{{ interaction.id }}/create-reply/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                message: message,
+                anonymous: anonymous
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                // Close reply form and clear message
+                document.getElementById('replyMessage').value = '';
+                document.getElementById('replyAnonymous').checked = false;
+                
+                // Show success message
+                showNotification('Reply posted successfully!', 'success');
+                
+                // Reload page to show new reply
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to post reply');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'error');
+        });
+    }
+</script>
+{% endblock %}

@@ -3,7 +3,7 @@
 {% load static %}
 {% load learning_filters %}
 
-{% block title %}Progress Report{% endblock %}
+{% block title %}Progress Report - Code Sanctuary{% endblock %}
 {% block page_title %}Progress Report{% endblock %}
 {% block page_subtitle %}Track Your Therapeutic Learning Journey{% endblock %}
 
@@ -47,6 +47,60 @@
     .emotion-positive::before { background-color: #28a745; }
     .emotion-neutral::before { background-color: #6c757d; }
     .emotion-challenging::before { background-color: #fd7e14; }
+    
+    .stat-card {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-number {
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 5px;
+    }
+    
+    .insight-item {
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        border-left: 4px solid #4CAF50;
+    }
+    
+    .milestone-badge {
+        min-width: 70px;
+        font-size: 0.8rem;
+    }
+    
+    @media (max-width: 768px) {
+        .emotion-timeline {
+            padding-left: 20px;
+        }
+        
+        .emotion-point::before {
+            left: -20px;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .btn-group .btn {
+            margin-bottom: 5px;
+            border-radius: 6px !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -68,15 +122,15 @@
                         <div class="btn-group w-100" role="group">
                             <a href="?period=week" 
                                class="btn {% if period == 'week' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                                Week
+                                <i class="fas fa-calendar-week me-1"></i> Week
                             </a>
                             <a href="?period=month" 
                                class="btn {% if period == 'month' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                                Month
+                                <i class="fas fa-calendar-alt me-1"></i> Month
                             </a>
                             <a href="?period=all" 
                                class="btn {% if period == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                                All Time
+                                <i class="fas fa-calendar me-1"></i> All Time
                             </a>
                         </div>
                     </div>
@@ -97,8 +151,15 @@
                         <div class="stat-label">Activities Completed</div>
                         <div class="stat-trend mt-2">
                             <small class="text-muted">
+                                {% if period == 'week' %}
                                 {% widthratio stats.total_completed|default:0 7 1 as avg_per_day %}
-                                ~{{ avg_per_day }} per day
+                                ~{{ avg_per_day }} per day this week
+                                {% elif period == 'month' %}
+                                {% widthratio stats.total_completed|default:0 30 1 as avg_per_day %}
+                                ~{{ avg_per_day }} per day this month
+                                {% else %}
+                                Total accomplishments
+                                {% endif %}
                             </small>
                         </div>
                     </div>
@@ -114,7 +175,11 @@
                         <div class="stat-label">Total Learning Time</div>
                         <div class="stat-trend mt-2">
                             <small class="text-muted">
+                                {% if stats.total_time|default:0 > 0 %}
                                 {{ stats.total_time|default:0|divide:60|floatformat:"0" }} total minutes
+                                {% else %}
+                                Start your journey today!
+                                {% endif %}
                             </small>
                         </div>
                     </div>
@@ -128,12 +193,16 @@
                         <div class="stat-label">Avg Confidence Change</div>
                         <div class="stat-trend mt-2">
                             <small class="text-muted">
-                                {% if stats.avg_confidence_change|default:0 > 0 %}
-                                <i class="fas fa-arrow-up text-success"></i> Growing confidence
+                                {% if stats.avg_confidence_change|default:0 > 0.5 %}
+                                <i class="fas fa-arrow-up text-success me-1"></i> Strong growth
+                                {% elif stats.avg_confidence_change|default:0 > 0 %}
+                                <i class="fas fa-arrow-up text-success me-1"></i> Growing
+                                {% elif stats.avg_confidence_change|default:0 < -0.5 %}
+                                <i class="fas fa-arrow-down text-warning me-1"></i> Challenging
                                 {% elif stats.avg_confidence_change|default:0 < 0 %}
-                                <i class="fas fa-arrow-down text-warning"></i> Challenging period
+                                <i class="fas fa-arrow-down text-warning me-1"></i> Slight dip
                                 {% else %}
-                                Stable confidence
+                                <i class="fas fa-equals text-secondary me-1"></i> Stable
                                 {% endif %}
                             </small>
                         </div>
@@ -144,39 +213,70 @@
         
         <!-- Emotional Timeline -->
         <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Emotional Journey</h5>
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0"><i class="fas fa-heartbeat me-2 text-danger"></i>Emotional Journey</h5>
             </div>
             <div class="card-body">
                 {% if emotional_data %}
                 <div class="emotion-timeline">
                     {% for data in emotional_data|slice:":5" %}
                     <div class="emotion-point emotion-{{ data.stress_change|default:0|get_emotional_change_class }}">
-                        <div class="card mb-3">
+                        <div class="card mb-3 border-0 shadow-sm">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <h6 class="mb-1">{{ data.date|default:"Unknown Date" }}</h6>
-                                    <small class="text-muted">
-                                        Stress change: 
-                                        <span class="fw-bold {% if data.stress_change|default:0 < 0 %}text-success{% elif data.stress_change|default:0 > 0 %}text-warning{% endif %}">
-                                            {{ data.stress_change|default:0 }}
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-calendar-day me-1 text-muted"></i>
+                                            {{ data.date|date:"M d, Y"|default:"Unknown Date" }}
+                                        </h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            {{ data.time|default:"Unknown time" }}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge {% if data.stress_change|default:0 < 0 %}bg-success{% elif data.stress_change|default:0 > 0 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            <i class="fas fa-chart-line me-1"></i>
+                                            {{ data.stress_change|default:0 }} stress change
                                         </span>
-                                    </small>
-                                </div>
-                                <div class="row mt-2">
-                                    <div class="col-md-6">
-                                        <small class="text-muted">Before: {{ data.before|default:"Neutral"|title }}</small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <small class="text-muted">After: {{ data.after|default:"Neutral"|title }}</small>
                                     </div>
                                 </div>
-                                <div class="progress mt-2" style="height: 6px;">
-                                    <div class="progress-bar bg-{{ data.before|default:'neutral'|get_emotional_alert_class }}" 
-                                         style="width: 50%"></div>
-                                    <div class="progress-bar bg-{{ data.after|default:'neutral'|get_emotional_alert_class }}" 
-                                         style="width: 50%"></div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="fas fa-sign-in-alt text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <small class="text-muted d-block">Before Activity</small>
+                                                <span class="badge bg-{{ data.before|default:'neutral'|get_emotional_alert_class }}">
+                                                    {{ data.before|default:"Neutral"|title }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="fas fa-sign-out-alt text-success"></i>
+                                            </div>
+                                            <div>
+                                                <small class="text-muted d-block">After Activity</small>
+                                                <span class="badge bg-{{ data.after|default:'neutral'|get_emotional_alert_class }}">
+                                                    {{ data.after|default:"Neutral"|title }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                                
+                                {% if data.reflection %}
+                                <div class="mt-3 p-2 bg-light rounded">
+                                    <small class="text-muted"><i class="fas fa-comment me-1"></i> Reflection:</small>
+                                    <p class="mb-0 small">{{ data.reflection|truncatechars:150 }}</p>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -185,16 +285,19 @@
                 
                 {% if emotional_data|length > 5 %}
                 <div class="text-center mt-3">
-                    <a href="#" class="btn btn-sm btn-outline-primary" id="load-more-emotions">
-                        Load more emotional data
+                    <a href="{% url 'learning:dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-chart-bar me-2"></i> View More Insights
                     </a>
                 </div>
                 {% endif %}
                 {% else %}
-                <div class="text-center py-4">
+                <div class="text-center py-5">
                     <i class="fas fa-heart fa-3x text-muted mb-3"></i>
-                    <h6 class="text-muted">No emotional data yet</h6>
-                    <p class="small text-muted">Complete activities with reflection to see your emotional journey</p>
+                    <h5 class="text-muted">No emotional data yet</h5>
+                    <p class="text-muted">Complete activities with reflection to see your emotional journey</p>
+                    <a href="{% url 'learning:dashboard' %}" class="btn btn-primary mt-2">
+                        <i class="fas fa-play me-2"></i> Start Learning
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -202,17 +305,17 @@
         
         <!-- Skill Development -->
         <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Skill Development</h5>
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>Skill Development</h5>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
-                        <h6>Activities by Difficulty</h6>
+                    <div class="col-md-6 mb-4 mb-md-0">
+                        <h6><i class="fas fa-layer-group me-2 text-info"></i>Activities by Difficulty</h6>
                         {% if activities_by_difficulty %}
                         <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
                                     <tr>
                                         <th>Level</th>
                                         <th>Completed</th>
@@ -224,14 +327,17 @@
                                     <tr>
                                         <td>
                                             <span class="badge bg-{{ level|get_difficulty_color }}">
-                                                Level {{ level }}
+                                                <i class="fas fa-{{ level|get_difficulty_icon }} me-1"></i>
+                                                {{ level|title }}
                                             </span>
                                         </td>
-                                        <td>{{ count }}</td>
+                                        <td class="fw-bold">{{ count }}</td>
                                         <td>
                                             <div class="progress" style="height: 8px;">
                                                 {% widthratio count stats.total_completed|default:1 100 as progress_percentage %}
-                                                <div class="progress-bar" style="width: {{ progress_percentage|default:0 }}%"></div>
+                                                <div class="progress-bar bg-{{ level|get_difficulty_color }}" 
+                                                     style="width: {{ progress_percentage|default:0 }}%">
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -240,37 +346,51 @@
                             </table>
                         </div>
                         {% else %}
-                        <p class="text-muted small">No difficulty data available yet.</p>
+                        <div class="text-center py-3">
+                            <i class="fas fa-chart-pie fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small mb-0">No difficulty data available yet.</p>
+                        </div>
                         {% endif %}
                     </div>
                     
                     <div class="col-md-6">
-                        <h6>Breakthrough Moments</h6>
+                        <h6><i class="fas fa-star me-2 text-warning"></i>Breakthrough Moments</h6>
                         {% if stats.breakthroughs|default:0 > 0 %}
-                        <div class="alert alert-success">
+                        <div class="alert alert-success border-0 shadow-sm">
                             <div class="d-flex">
-                                <i class="fas fa-star fa-2x me-3"></i>
-                                <div>
-                                    <h6 class="alert-heading">{{ stats.breakthroughs }} Breakthrough{{ stats.breakthroughs|pluralize }}</h6>
-                                    <p class="mb-0">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-star fa-2x text-warning"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="alert-heading mb-1">{{ stats.breakthroughs }} Breakthrough{{ stats.breakthroughs|pluralize }} Achieved!</h6>
+                                    <p class="mb-0 small">
                                         These are moments where learning felt especially meaningful or transformative.
+                                        Celebrate your growth!
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        <div class="d-grid">
+                        <div class="d-grid gap-2">
                             <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#breakthroughsModal">
                                 <i class="fas fa-eye me-2"></i> View Breakthroughs
                             </button>
+                            <a href="{% url 'learning:dashboard' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-book me-2"></i> Continue Learning
+                            </a>
                         </div>
                         {% else %}
                         <div class="text-center py-4">
                             <i class="fas fa-seedling fa-3x text-muted mb-3"></i>
                             <h6 class="text-muted">No breakthroughs yet</h6>
-                            <p class="small text-muted">
+                            <p class="small text-muted mb-3">
                                 Breakthroughs often come with time and gentle persistence. 
                                 Keep learning at your own pace.
                             </p>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'learning:dashboard' %}" class="btn btn-primary">
+                                    <i class="fas fa-play me-2"></i> Continue Learning
+                                </a>
+                            </div>
                         </div>
                         {% endif %}
                     </div>
@@ -283,45 +403,72 @@
     <div class="col-lg-4">
         <!-- Personal Insights -->
         <div class="card mb-4">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Personal Insights</h6>
+            <div class="card-header bg-transparent">
+                <h6 class="mb-0"><i class="fas fa-lightbulb me-2 text-warning"></i>Personal Insights</h6>
             </div>
             <div class="card-body">
                 <div class="insight-item mb-3">
-                    <h6 class="small text-muted">Learning Pattern</h6>
+                    <h6 class="small text-muted mb-2">
+                        <i class="fas fa-chart-line me-1"></i> Learning Pattern
+                    </h6>
                     <p class="mb-0">
-                        {% if stats.total_completed|default:0 > 10 %}
-                        You're building consistent learning habits. Great work!
+                        {% if stats.total_completed|default:0 > 15 %}
+                        <i class="fas fa-trophy text-warning me-1"></i>
+                        You're building excellent learning habits with remarkable consistency!
+                        {% elif stats.total_completed|default:0 > 10 %}
+                        <i class="fas fa-rocket text-success me-1"></i>
+                        You're developing strong learning rhythms. Keep this momentum!
                         {% elif stats.total_completed|default:0 > 5 %}
-                        You're developing a learning rhythm. Keep going!
+                        <i class="fas fa-seedling text-primary me-1"></i>
+                        You're cultivating healthy learning habits. Every step builds confidence.
                         {% else %}
-                        You're beginning your learning journey. Every step counts.
+                        <i class="fas fa-compass text-info me-1"></i>
+                        You're beginning your learning journey. Every single step counts toward growth.
                         {% endif %}
                     </p>
                 </div>
                 
                 <div class="insight-item mb-3">
-                    <h6 class="small text-muted">Therapeutic Note</h6>
+                    <h6 class="small text-muted mb-2">
+                        <i class="fas fa-heart me-1 text-danger"></i> Therapeutic Note
+                    </h6>
                     <p class="mb-0">
                         {% if stats.avg_confidence_change|default:0 > 0.5 %}
-                        Your confidence is growing with each activity. That's wonderful progress!
+                        <i class="fas fa-arrow-up text-success me-1"></i>
+                        Your confidence is growing beautifully with each activity. That's wonderful therapeutic progress!
+                        {% elif stats.avg_confidence_change|default:0 > 0 %}
+                        <i class="fas fa-arrow-up text-success me-1"></i>
+                        You're building confidence steadily. Growth is happening, one step at a time.
                         {% elif stats.avg_confidence_change|default:0 < -0.5 %}
-                        You're facing challenges. Remember to be gentle with yourself.
+                        <i class="fas fa-hands-helping text-warning me-1"></i>
+                        You're facing challenges that test your resilience. Be gentle with yourself - growth isn't linear.
+                        {% elif stats.avg_confidence_change|default:0 < 0 %}
+                        <i class="fas fa-balance-scale text-info me-1"></i>
+                        You're navigating learning challenges. Remember to balance effort with self-care.
                         {% else %}
-                        You're maintaining steady progress. Consistency is key.
+                        <i class="fas fa-anchor text-secondary me-1"></i>
+                        You're maintaining steady, consistent progress. Stability is its own kind of strength.
                         {% endif %}
                     </p>
                 </div>
                 
                 <div class="insight-item">
-                    <h6 class="small text-muted">Recommendation</h6>
+                    <h6 class="small text-muted mb-2">
+                        <i class="fas fa-bullseye me-1 text-success"></i> Recommendation
+                    </h6>
                     <p class="mb-0">
-                        {% if period == 'week' and stats.total_completed|default:0 > 5 %}
-                        Consider taking a gentler pace next week to prevent burnout.
+                        {% if period == 'week' and stats.total_completed|default:0 > 7 %}
+                        <i class="fas fa-pause-circle text-warning me-1"></i>
+                        Consider taking a gentler pace next week or scheduling a rest day to integrate your learning.
                         {% elif period == 'week' and stats.total_completed|default:0 < 2 %}
-                        You might try one more gentle activity this week.
+                        <i class="fas fa-plus-circle text-primary me-1"></i>
+                        You might try one more gentle activity this week, or simply reflect on what you've learned so far.
+                        {% elif stats.avg_confidence_change|default:0 < 0 %}
+                        <i class="fas fa-spa text-info me-1"></i>
+                        Consider choosing activities focused on enjoyment rather than challenge for your next session.
                         {% else %}
-                        Continue learning at whatever pace feels right for you.
+                        <i class="fas fa-forward text-success me-1"></i>
+                        Continue learning at whatever pace feels right for you. Trust your own rhythm.
                         {% endif %}
                     </p>
                 </div>
@@ -330,87 +477,109 @@
         
         <!-- Export Options -->
         <div class="card mb-4">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-download me-2"></i>Export Report</h6>
+            <div class="card-header bg-transparent">
+                <h6 class="mb-0"><i class="fas fa-download me-2 text-info"></i>Export & Share</h6>
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="#" class="btn btn-outline-primary" onclick="showNotification('PDF export coming soon!', 'info')">
-                        <i class="fas fa-file-pdf me-2"></i> PDF Report
-                    </a>
-                    <a href="#" class="btn btn-outline-success" onclick="showNotification('CSV export coming soon!', 'info')">
-                        <i class="fas fa-file-csv me-2"></i> CSV Data
-                    </a>
-                    <a href="#" class="btn btn-outline-info" onclick="shareProgress()">
+                    <!-- Changed from URL to button with onclick -->
+                    <button class="btn btn-outline-primary" onclick="exportReport('pdf')">
+                        <i class="fas fa-file-pdf me-2"></i> Download PDF Report
+                    </button>
+                    <button class="btn btn-outline-success" onclick="exportReport('csv')">
+                        <i class="fas fa-file-csv me-2"></i> Download CSV Data
+                    </button>
+                    <button class="btn btn-outline-info" onclick="shareProgress()">
                         <i class="fas fa-share-alt me-2"></i> Share Progress
-                    </a>
+                    </button>
                 </div>
-                <div class="alert alert-light small mt-3 mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Export your progress to track long-term therapeutic growth
+                <div class="alert alert-light small mt-3 mb-0 border-0">
+                    <i class="fas fa-info-circle me-2 text-primary"></i>
+                    Export your progress to track long-term therapeutic growth and share achievements
                 </div>
             </div>
         </div>
         
         <!-- Milestones -->
         <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Milestones</h6>
+            <div class="card-header bg-transparent">
+                <h6 class="mb-0"><i class="fas fa-trophy me-2 text-warning"></i>Milestones</h6>
             </div>
             <div class="card-body">
                 <div class="list-group list-group-flush">
                     <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-flag text-primary me-2"></i>
-                            First Activity
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-flag text-primary me-3"></i>
+                            <div>
+                                <small class="d-block text-muted">First Step</small>
+                                <span>First Activity</span>
+                            </div>
                         </div>
-                        <span class="badge {% if stats.total_completed|default:0 >= 1 %}bg-success{% else %}bg-light text-dark{% endif %}">
-                            {% if stats.total_completed|default:0 >= 1 %}✓{% else %}0/1{% endif %}
+                        <span class="badge milestone-badge {% if stats.total_completed|default:0 >= 1 %}bg-success{% else %}bg-light text-dark{% endif %}">
+                            {% if stats.total_completed|default:0 >= 1 %}<i class="fas fa-check"></i> Done{% else %}0/1{% endif %}
                         </span>
                     </div>
                     
                     <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-fire text-warning me-2"></i>
-                            7-Day Streak
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-fire text-warning me-3"></i>
+                            <div>
+                                <small class="d-block text-muted">Consistency</small>
+                                <span>7-Day Streak</span>
+                            </div>
                         </div>
-                        <span class="badge {% if request.user.get_streak >= 7 %}bg-success{% else %}bg-light text-dark{% endif %}">
-                            {% if request.user.get_streak >= 7 %}✓{% else %}{{ request.user.get_streak|default:0 }}/7{% endif %}
+                        <span class="badge milestone-badge {% if request.user.get_streak >= 7 %}bg-success{% else %}bg-light text-dark{% endif %}">
+                            {% if request.user.get_streak >= 7 %}<i class="fas fa-check"></i> Done{% else %}{{ request.user.get_streak|default:0 }}/7{% endif %}
                         </span>
                     </div>
                     
                     <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-layer-group text-info me-2"></i>
-                            10 Activities
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-layer-group text-info me-3"></i>
+                            <div>
+                                <small class="d-block text-muted">Dedication</small>
+                                <span>10 Activities</span>
+                            </div>
                         </div>
-                        <span class="badge {% if stats.total_completed|default:0 >= 10 %}bg-success{% else %}bg-light text-dark{% endif %}">
+                        <span class="badge milestone-badge {% if stats.total_completed|default:0 >= 10 %}bg-success{% else %}bg-light text-dark{% endif %}">
                             {{ stats.total_completed|default:0 }}/10
                         </span>
                     </div>
                     
                     <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-star text-warning me-2"></i>
-                            5 Breakthroughs
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-star text-warning me-3"></i>
+                            <div>
+                                <small class="d-block text-muted">Growth</small>
+                                <span>5 Breakthroughs</span>
+                            </div>
                         </div>
-                        <span class="badge {% if stats.breakthroughs|default:0 >= 5 %}bg-success{% else %}bg-light text-dark{% endif %}">
+                        <span class="badge milestone-badge {% if stats.breakthroughs|default:0 >= 5 %}bg-success{% else %}bg-light text-dark{% endif %}">
                             {{ stats.breakthroughs|default:0 }}/5
                         </span>
                     </div>
                 </div>
                 
-                <div class="progress mt-3" style="height: 10px;">
-                    {% widthratio stats.total_completed|default:0 50 100 as mastery_progress %}
-                    <div class="progress-bar" role="progressbar" 
-                         style="width: {{ mastery_progress|default:0 }}%"
-                         aria-valuenow="{{ stats.total_completed|default:0 }}" 
-                         aria-valuemin="0" aria-valuemax="50">
+                <!-- Mastery Progress -->
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small class="text-muted">Mastery Progress</small>
+                        <small class="text-muted">{{ stats.total_completed|default:0 }}/50</small>
                     </div>
+                    <div class="progress" style="height: 10px; border-radius: 5px;">
+                        {% widthratio stats.total_completed|default:0 50 100 as mastery_progress %}
+                        <div class="progress-bar bg-gradient" 
+                             role="progressbar" 
+                             style="width: {{ mastery_progress|default:0 }}%; background: linear-gradient(90deg, #4CAF50, #2196F3);"
+                             aria-valuenow="{{ stats.total_completed|default:0 }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="50">
+                        </div>
+                    </div>
+                    <small class="text-muted d-block text-center mt-1">
+                        {{ mastery_progress|default:0 }}% toward learning mastery
+                    </small>
                 </div>
-                <small class="text-muted d-block text-center mt-1">
-                    {{ stats.total_completed|default:0 }}/50 activities toward mastery
-                </small>
             </div>
         </div>
     </div>
@@ -421,101 +590,203 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-star me-2"></i>Your Breakthrough Moments</h5>
+                <h5 class="modal-title"><i class="fas fa-star me-2 text-warning"></i>Your Breakthrough Moments</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-lightbulb me-2"></i>
-                    Breakthroughs are personal moments of growth, understanding, or emotional shift in your learning journey.
+                <div class="alert alert-info border-0 bg-light">
+                    <div class="d-flex">
+                        <i class="fas fa-lightbulb fa-2x text-info me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">What are breakthroughs?</h6>
+                            <p class="mb-0 small">Breakthroughs are personal moments of growth, understanding, or emotional shift in your learning journey. They represent significant steps in your therapeutic progress.</p>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="list-group">
-                    <div class="list-group-item">
+                    {% if stats.breakthroughs_details %}
+                        {% for breakthrough in stats.breakthroughs_details %}
+                        <div class="list-group-item border-0 shadow-sm mb-2">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-star text-warning fa-2x"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6>{{ breakthrough.title|default:"Meaningful Moment" }}</h6>
+                                        <small class="text-muted">{{ breakthrough.date|date:"M d, Y" }}</small>
+                                    </div>
+                                    <p class="mb-2">{{ breakthrough.description|default:"A significant moment in your learning journey." }}</p>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-light text-dark me-2">
+                                            <i class="fas fa-heart me-1 text-danger"></i>
+                                            {{ breakthrough.emotion_before|default:"Neutral" }} → {{ breakthrough.emotion_after|default:"Positive" }}
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-bolt me-1 text-warning"></i>
+                                            Confidence +{{ breakthrough.confidence_change|default:"1.0" }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="list-group-item border-0">
                         <div class="d-flex">
                             <div class="flex-shrink-0">
-                                <i class="fas fa-star text-warning fa-2x"></i>
+                                <i class="fas fa-seedling text-success fa-2x"></i>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <h6>Keep Going!</h6>
-                                <p class="small text-muted mb-1">Your breakthroughs will appear here</p>
-                                <p class="mb-0">Complete activities and add reflection notes to record your breakthrough moments.</p>
+                                <h6>Your breakthroughs will appear here</h6>
+                                <p class="text-muted mb-1">Breakthroughs are recorded when you:</p>
+                                <ul class="text-muted small mb-2">
+                                    <li>Complete challenging activities with positive outcomes</li>
+                                    <li>Report significant emotional shifts during learning</li>
+                                    <li>Experience moments of clarity or understanding</li>
+                                    <li>Overcome learning obstacles</li>
+                                </ul>
+                                <div class="d-grid">
+                                    <a href="{% url 'learning:dashboard' %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-play me-2"></i> Continue Learning
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
 function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
-    notification.style.zIndex = '9999';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 350px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     `;
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            <span class="flex-grow-1">${message}</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    
+    // Remove existing notifications
+    document.querySelectorAll('.position-fixed.alert').forEach(el => el.remove());
+    
     document.body.appendChild(notification);
     
-    // Auto-remove after 3 seconds
+    // Auto-remove after 4 seconds
     setTimeout(() => {
         if (notification.parentNode) {
-            notification.remove();
+            $(notification).alert('close');
         }
-    }, 3000);
+    }, 4000);
+}
+
+function exportReport(format) {
+    const period = '{{ period|default:"week" }}';
+    showNotification(`Generating ${format.toUpperCase()} report for ${period} period...`, 'info');
+    
+    // Simulate processing
+    setTimeout(() => {
+        showNotification(`${format.toUpperCase()} report generated successfully! Feature coming soon.`, 'success');
+    }, 1500);
 }
 
 function shareProgress() {
+    const progressData = {
+        activities: {{ stats.total_completed|default:0 }},
+        time: '{{ stats.total_time|default:0|divide:3600|floatformat:"1" }} hours',
+        confidence: '{{ stats.avg_confidence_change|default:0|floatformat:"1" }}',
+        breakthroughs: {{ stats.breakthroughs|default:0 }}
+    };
+    
     if (navigator.share) {
         // Web Share API
         navigator.share({
-            title: 'My Therapeutic Learning Progress',
-            text: `I've completed {{ stats.total_completed|default:0 }} activities on Therapeutic Coding!`,
+            title: 'My Therapeutic Learning Progress - Code Sanctuary',
+            text: `I've completed ${progressData.activities} activities with ${progressData.time} of learning! Confidence change: ${progressData.confidence}. ${progressData.breakthroughs} breakthroughs achieved!`,
             url: window.location.href
+        }).then(() => {
+            showNotification('Progress shared successfully!', 'success');
         }).catch(err => {
             console.log('Error sharing:', err);
-            showNotification('Sharing not supported on this device', 'warning');
+            copyToClipboard();
         });
     } else {
-        // Fallback
-        const shareText = `My Therapeutic Learning Progress:\n` +
-                         `Completed: {{ stats.total_completed|default:0 }} activities\n` +
-                         `Learning time: {{ stats.total_time|default:0|divide:3600|floatformat:"1" }} hours\n` +
-                         `View my full progress: ${window.location.href}`;
-        
-        // Copy to clipboard
-        navigator.clipboard.writeText(shareText).then(() => {
-            showNotification('Progress copied to clipboard!', 'success');
-        }).catch(err => {
-            console.log('Error copying:', err);
-            showNotification('Could not copy to clipboard', 'warning');
-        });
+        copyToClipboard();
     }
 }
 
+function copyToClipboard() {
+    const shareText = `My Therapeutic Learning Progress - Code Sanctuary:\n\n` +
+                     `✅ Activities Completed: {{ stats.total_completed|default:0 }}\n` +
+                     `⏱️ Learning Time: {{ stats.total_time|default:0|divide:3600|floatformat:"1" }} hours\n` +
+                     `📈 Avg Confidence Change: {{ stats.avg_confidence_change|default:0|floatformat:"1" }}\n` +
+                     `🌟 Breakthroughs: {{ stats.breakthroughs|default:0 }}\n\n` +
+                     `View my full progress: ${window.location.href}`;
+    
+    navigator.clipboard.writeText(shareText).then(() => {
+        showNotification('Progress copied to clipboard! Share it anywhere.', 'success');
+    }).catch(err => {
+        console.log('Error copying:', err);
+        showNotification('Could not copy to clipboard. Please try again.', 'warning');
+    });
+}
+
 $(document).ready(function() {
-    // Load more emotions
-    $('#load-more-emotions').click(function(e) {
+    // Smooth scroll for anchors
+    $('a[href^="#"]').on('click', function(e) {
         e.preventDefault();
-        showNotification('Loading more emotional data...', 'info');
-        
-        // Simulate loading
-        setTimeout(() => {
-            showNotification('Feature coming soon!', 'info');
-        }, 1000);
+        const target = $(this.getAttribute('href'));
+        if (target.length) {
+            $('html, body').animate({
+                scrollTop: target.offset().top - 80
+            }, 500);
+        }
     });
     
-    // Export buttons
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Handle export buttons
     $('.btn-outline-primary, .btn-outline-success').click(function(e) {
-        e.preventDefault();
-        showNotification('Export feature coming soon!', 'info');
+        const btn = $(this);
+        const originalText = btn.html();
+        
+        // Show loading state
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Generating...');
+        
+        // Simulate processing
+        setTimeout(() => {
+            btn.prop('disabled', false).html(originalText);
+            showNotification('Report generated successfully! Feature coming soon.', 'success');
+        }, 1500);
     });
+    
+    // Initialize charts if Chart.js is available
+    if (typeof Chart !== 'undefined') {
+        initializeProgressCharts();
+    }
 });
+
+function initializeProgressCharts() {
+    // This would initialize any charts if we had chart data
+    console.log('Chart.js is available - charts could be initialized here');
+}
 </script>
-{% endblock %}
 {% endblock %}

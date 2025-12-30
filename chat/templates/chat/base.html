@@ -1,0 +1,321 @@
+{% extends "therapy/base.html" %}
+{% load static %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'chat/css/chat.css' %}">
+<link rel="stylesheet" href="{% static 'chat/css/gentle-chat.css' %}">
+<style>
+    :root {
+        --chat-primary: #3498db;
+        --chat-secondary: #2ecc71;
+        --chat-safe: #27ae60;
+        --chat-warning: #e74c3c;
+        --chat-gentle: #f8f9fa;
+        --chat-border: #dee2e6;
+        --chat-shadow: rgba(0, 0, 0, 0.1);
+        
+        /* Stress-based adjustments */
+        --stress-opacity: calc(1 - ({{ user.current_stress_level }} * 0.05));
+        --chat-bg-opacity: calc(0.95 + ({{ user.current_stress_level }} * 0.005));
+    }
+    
+    body.chat-active {
+        background-color: rgba(248, 249, 250, var(--chat-bg-opacity));
+    }
+    
+    .therapy-chat-container {
+        opacity: var(--stress-opacity);
+        transition: opacity 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'chat/js/chat.js' %}" defer></script>
+<script src="{% static 'chat/js/therapeutic-chat.js' %}" defer></script>
+<script src="{% static 'chat/js/websocket-client.js' %}" defer></script>
+{% endblock %}
+
+{% block title %}{% block chat_title %}Therapeutic Chat | Code Sanctuary{% endblock %}{% endblock %}
+
+{% block content %}
+<div class="therapy-chat-container" id="chatContainer" data-user-id="{{ user.id }}">
+    <!-- Gentle Mode Overlay for Chat -->
+    {% if user.gentle_mode %}
+    <div class="gentle-chat-overlay" id="gentleChatOverlay">
+        <div class="gentle-overlay-content">
+            <i class="fas fa-heart-circle-check fa-3x mb-3"></i>
+            <h4>Gentle Chat Mode</h4>
+            <p>Taking it slow and steady. You're in control of your pace.</p>
+            <button class="btn btn-sm btn-outline-light mt-2" id="hideGentleOverlay">Continue</button>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Chat Navigation Bar -->
+    <nav class="chat-navbar navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand chat-brand" href="{% url 'chat:dashboard' %}">
+                <i class="fas fa-comments-medical"></i>
+                <span class="d-none d-md-inline">Therapeutic Chat</span>
+                <span class="d-inline d-md-none">Chat</span>
+            </a>
+            
+            <!-- Stress Level Indicator -->
+            <div class="chat-stress-indicator">
+                <div class="stress-level-display">
+                    <i class="fas fa-heartbeat"></i>
+                    <span class="stress-value">{{ user.current_stress_level }}/10</span>
+                    <div class="stress-bar">
+                        <div class="stress-fill" style="width: {{ user.current_stress_level|add:'0' }}0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Controls -->
+            <div class="chat-controls">
+                <button class="btn btn-sm btn-outline-therapy" id="chatSettingsToggle" title="Chat Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+                
+                <button class="btn btn-sm btn-outline-therapy" id="emotionalCheckinTrigger" 
+                        title="Quick Emotional Check-in" data-bs-toggle="modal" data-bs-target="#emotionalCheckinModal">
+                    <i class="fas fa-heartbeat"></i>
+                </button>
+                
+                <button class="btn btn-sm btn-outline-therapy" id="safetyPlanTrigger" 
+                        title="Safety Plan" data-bs-toggle="modal" data-bs-target="#safetyPlanModal">
+                    <i class="fas fa-shield-alt"></i>
+                </button>
+                
+                <!-- Notification Bell -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-therapy dropdown-toggle" 
+                            type="button" id="chatNotificationsDropdown" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-bell"></i>
+                        {% if unread_notifications_count %}
+                        <span class="notification-badge">{{ unread_notifications_count }}</span>
+                        {% endif %}
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end chat-notifications-dropdown" 
+                         aria-labelledby="chatNotificationsDropdown">
+                        <div class="dropdown-header">
+                            <h6>Chat Notifications</h6>
+                            <a href="{% url 'chat:notification_center' %}" class="small">See All</a>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div id="chatNotificationsList">
+                            <!-- Notifications loaded via AJAX -->
+                            <div class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Chat Content -->
+    <div class="chat-main-content">
+        {% block chat_content %}
+        <!-- Chat content will be inserted here by child templates -->
+        {% endblock %}
+    </div>
+    
+    <!-- Therapeutic Chat Modals -->
+    
+    <!-- Emotional Check-in Modal -->
+    <div class="modal fade therapeutic-modal" id="emotionalCheckinModal" tabindex="-1" 
+         aria-labelledby="emotionalCheckinModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-therapy-primary text-white">
+                    <h5 class="modal-title" id="emotionalCheckinModalLabel">
+                        <i class="fas fa-heartbeat me-2"></i>Emotional Check-in
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="emotionalCheckinFormContainer">
+                    <!-- Form loaded via AJAX -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-therapy-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">Preparing your gentle check-in...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Safety Plan Modal -->
+    <div class="modal fade therapeutic-modal" id="safetyPlanModal" tabindex="-1" 
+         aria-labelledby="safetyPlanModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-therapy-safe text-white">
+                    <h5 class="modal-title" id="safetyPlanModalLabel">
+                        <i class="fas fa-shield-alt me-2"></i>Your Safety Plan
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="safetyPlanContainer">
+                    <!-- Safety plan loaded via AJAX -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-therapy-safe" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">Loading your safety resources...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chat Settings Modal -->
+    <div class="modal fade therapeutic-modal" id="chatSettingsModal" tabindex="-1" 
+         aria-labelledby="chatSettingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-therapy-secondary text-white">
+                    <h5 class="modal-title" id="chatSettingsModalLabel">
+                        <i class="fas fa-cog me-2"></i>Chat Settings
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="chatSettingsContainer">
+                    <!-- Settings loaded via AJAX -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-therapy-secondary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">Loading your chat preferences...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_title %}{% block chat_page_title %}Therapeutic Chat{% endblock %}{% endblock %}
+
+{% block page_subtitle %}{% block chat_page_subtitle %}A safe space for healing conversations{% endblock %}{% endblock %}
+
+{% block extra_footer_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize chat-specific functionality
+        const chatContainer = document.getElementById('chatContainer');
+        
+        if (chatContainer) {
+            // Hide gentle overlay
+            const hideGentleBtn = document.getElementById('hideGentleOverlay');
+            const gentleOverlay = document.getElementById('gentleChatOverlay');
+            
+            if (hideGentleBtn && gentleOverlay) {
+                hideGentleBtn.addEventListener('click', function() {
+                    gentleOverlay.style.opacity = '0';
+                    setTimeout(() => {
+                        gentleOverlay.style.display = 'none';
+                    }, 300);
+                });
+            }
+            
+            // Load modals via AJAX
+            const modals = {
+                '#emotionalCheckinModal': '{% url "chat:emotional_checkin_modal" %}',
+                '#safetyPlanModal': '{% url "chat:safety_plan_modal" %}',
+                '#chatSettingsModal': '{% url "chat:settings_modal" %}'
+            };
+            
+            for (const [modalId, url] of Object.entries(modals)) {
+                const modal = document.querySelector(modalId);
+                if (modal) {
+                    modal.addEventListener('shown.bs.modal', function() {
+                        const containerId = modalId.replace('Modal', 'Container');
+                        const container = document.getElementById(containerId.replace('#', ''));
+                        
+                        if (container) {
+                            fetch(url)
+                                .then(response => response.text())
+                                .then(html => {
+                                    container.innerHTML = html;
+                                })
+                                .catch(error => {
+                                    container.innerHTML = `
+                                        <div class="alert alert-danger">
+                                            <i class="fas fa-exclamation-circle me-2"></i>
+                                            Failed to load content. Please try again.
+                                        </div>
+                                    `;
+                                });
+                        }
+                    });
+                }
+            }
+            
+            // Load notifications
+            loadChatNotifications();
+            
+            // Set up WebSocket connection
+            initializeChatWebSocket();
+            
+            // Apply stress-based adjustments
+            applyStressAdjustments();
+        }
+        
+        function loadChatNotifications() {
+            const notificationsList = document.getElementById('chatNotificationsList');
+            if (notificationsList) {
+                fetch('{% url "chat:notification_list_ajax" %}')
+                    .then(response => response.text())
+                    .then(html => {
+                        notificationsList.innerHTML = html;
+                    })
+                    .catch(error => {
+                        notificationsList.innerHTML = `
+                            <div class="text-center py-2">
+                                <small class="text-muted">Unable to load notifications</small>
+                            </div>
+                        `;
+                    });
+            }
+        }
+        
+        function applyStressAdjustments() {
+            const stressLevel = {{ user.current_stress_level }};
+            const chatElements = document.querySelectorAll('.chat-message, .chat-input, .chat-room-card');
+            
+            if (stressLevel >= 7) {
+                // High stress: reduce motion and intensity
+                document.body.classList.add('high-stress-chat');
+                
+                chatElements.forEach(el => {
+                    el.style.filter = 'grayscale(20%)';
+                    el.style.opacity = '0.9';
+                });
+            } else if (stressLevel >= 4) {
+                // Moderate stress: subtle adjustments
+                chatElements.forEach(el => {
+                    el.style.filter = 'none';
+                    el.style.opacity = '1';
+                });
+            }
+        }
+        
+        function initializeChatWebSocket() {
+            // This would be implemented based on your WebSocket setup
+            console.log('Initializing therapeutic chat WebSocket...');
+            // WebSocket initialization code would go here
+        }
+    });
+</script>
+{% endblock %}

@@ -1,309 +1,268 @@
+# social/forms.py
+"""
+Forms for therapeutic social app
+"""
+
 from django import forms
-from .models import GentleInteraction, SupportCircle, CircleMembership
 from django.core.exceptions import ValidationError
-from django.forms import JSONField  # FIXED
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from .models import GentleInteraction, SupportCircle, CircleMembership, Achievement
+
+User = get_user_model()
 
 
-# ---------------------------------------
-# Helper mixin for warnings
-# ---------------------------------------
-class WarningMixin:
-    """Allows forms to collect non-blocking warnings."""
-
-    def add_warning(self, message):
-        if not hasattr(self, "_warnings"):
-            self._warnings = []
-        self._warnings.append(message)
-
-    def get_warnings(self):
-        return getattr(self, "_warnings", [])
-
-
-# ---------------------------------------
-# Gentle Interaction Form
-# ---------------------------------------
-class GentleInteractionForm(WarningMixin, forms.ModelForm):
-
+class GentleInteractionForm(forms.ModelForm):
+    """
+    Form for creating therapeutic interactions
+    """
+    
     class Meta:
         model = GentleInteraction
         fields = [
-            'interaction_type', 'recipient', 'title', 'message',
-            'visibility', 'allow_replies', 'therapeutic_intent',
-            'expected_response_time'
+            'title', 'message', 'interaction_type', 
+            'visibility', 'therapeutic_intent',
+            'allow_replies', 'is_pinned', 'anonymous'
         ]
         widgets = {
-            'interaction_type': forms.Select(attrs={
-                'class': 'interaction-type-select',
-                'onchange': 'updateInteractionGuidance(this.value)'
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Give your interaction a title...'
             }),
             'message': forms.Textarea(attrs={
+                'class': 'form-control',
                 'rows': 4,
-                'class': 'gentle-message',
-                'placeholder': 'Share something gentle and supportive...'
+                'placeholder': 'Share your thoughts...'
             }),
-            'visibility': forms.Select(attrs={'class': 'visibility-select'}),
+            'interaction_type': forms.Select(attrs={'class': 'form-select'}),
+            'visibility': forms.Select(attrs={'class': 'form-select'}),
             'therapeutic_intent': forms.Textarea(attrs={
+                'class': 'form-control',
                 'rows': 2,
-                'class': 'intent-textarea',
-                'placeholder': 'What is your hope for this interaction?...'
-            })
-        }
-
-    def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-
-        self.fields['message'].help_text = "Use kind, supportive language"
-        self.fields['therapeutic_intent'].help_text = "Optional: your positive intention"
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        # Message length check
-        message = cleaned_data.get('message', '')
-        if len(message.split()) > 200:
-            self.add_warning("Consider keeping messages concise for gentle reading")
-
-        # Visibility rules
-        visibility = cleaned_data.get('visibility')
-        recipient = cleaned_data.get('recipient')
-
-        if visibility == 'private' and not recipient:
-            raise ValidationError("Private messages require a recipient")
-
-        if visibility == 'anonymous' and recipient:
-            self.add_warning("Anonymous messages typically go to the community")
-
-        return cleaned_data
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        if self.user and instance.visibility != 'anonymous':
-            instance.sender = self.user
-
-        if commit:
-            instance.save()
-
-        return instance
-
-
-# ---------------------------------------
-# Quick Encouragement Form
-# ---------------------------------------
-class QuickEncouragementForm(forms.Form):
-
-    MESSAGE_CHOICES = [
-        ('keep_going', 'You\'re doing great! Keep going. 💪'),
-        ('proud', 'I\'m proud of your effort today. 🌟'),
-        ('progress', 'Every small step is progress. 🚶‍♂️'),
-        ('breathe', 'Remember to breathe. You\'ve got this. 🌬️'),
-        ('kind', 'Be kind to yourself today. You deserve it. ❤️'),
-        ('custom', 'Write my own message...')
-    ]
-
-    message_type = forms.ChoiceField(
-        choices=MESSAGE_CHOICES,
-        widget=forms.RadioSelect(attrs={'class': 'message-radio'})
-    )
-
-    custom_message = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'custom-message',
-            'placeholder': 'Your gentle message...',
-            'maxlength': '100'
-        })
-    )
-
-    anonymous = forms.BooleanField(
-        initial=True,
-        widget=forms.CheckboxInput(attrs={'class': 'anonymous-checkbox'})
-    )
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        if cleaned_data.get('message_type') == 'custom' and not cleaned_data.get('custom_message'):
-            raise ValidationError("Please write a custom message")
-
-        return cleaned_data
-
-    def create_interaction(self, user, recipient=None):
-        message_type = self.cleaned_data['message_type']
-        anonymous = self.cleaned_data['anonymous']
-
-        if message_type == 'custom':
-            message = self.cleaned_data['custom_message']
-        else:
-            message = dict(self.MESSAGE_CHOICES)[message_type]
-
-        visibility = 'anonymous' if anonymous else 'community'
-
-        return GentleInteraction.objects.create(
-            sender=None if anonymous else user,
-            recipient=recipient,
-            interaction_type='encouragement',
-            message=message,
-            visibility=visibility
-        )
-
-
-# ---------------------------------------
-# Support Circle Form
-# ---------------------------------------
-class SupportCircleForm(WarningMixin, forms.ModelForm):
-
-    class Meta:
-        model = SupportCircle
-        fields = [
-            'name', 'description', 'max_members', 'is_public',
-            'join_code', 'focus_areas', 'community_guidelines',
-            'meeting_schedule'
-        ]
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 4, 'class': 'circle-description'}),
-            'community_guidelines': forms.Textarea(attrs={
-                'rows': 6,
-                'class': 'guidelines-textarea',
-                'placeholder': 'Our gentle community agreements...'
+                'placeholder': 'What is the therapeutic purpose of this interaction?'
             }),
-            'meeting_schedule': forms.Textarea(attrs={
-                'rows': 4,
-                'class': 'schedule-textarea',
-                'placeholder': 'Weekly meeting times...'
-            })
+            'allow_replies': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_pinned': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'anonymous': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-
-    def __init__(self, *args, **kwargs):
-        self.creator = kwargs.pop('creator', None)
-        super().__init__(*args, **kwargs)
-
-        self.fields['join_code'].help_text = "Optional code for private circles"
-        self.fields['focus_areas'].help_text = "Comma-separated therapeutic focus areas"
-
-    def clean(self):
-        cleaned_data = super().clean()
-        max_members = cleaned_data.get('max_members', 10)
-
-        if max_members < 3:
-            raise ValidationError("Support circles need at least 3 members")
-
-        if max_members > 50:
-            self.add_warning("Large circles can be overwhelming for some")
-
-        return cleaned_data
-
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-
-        if self.creator and not instance.pk:
-            instance.created_by = self.creator
-
-        if commit:
-            instance.save()
-
-            # Auto-join creator
-            if self.creator:
-                CircleMembership.objects.create(
-                    circle=instance,
-                    user=self.creator,
-                    role='leader'
+    
+    def clean_message(self):
+        message = self.cleaned_data.get('message', '')
+        
+        # Check for concerning language
+        concerning_patterns = [
+            r'\b(kill|die|suicide|hurt myself)\b',
+            r'\b(hate|worthless|stupid|idiot)\b',
+        ]
+        
+        for pattern in concerning_patterns:
+            if re.search(pattern, message.lower()):
+                raise ValidationError(
+                    "This contains language that may need therapeutic support. "
+                    "Please reach out to a mental health professional if you're in crisis."
                 )
-                instance.active_members = 1
-                instance.save(update_fields=['active_members'])
+        
+        # Check length
+        word_count = len(message.split())
+        if word_count > 500:
+            raise ValidationError(
+                "Messages should be concise for gentle reading (max 500 words)."
+            )
+        
+        return message
+    
+    def clean_title(self):
+        title = self.cleaned_data.get('title', '')
+        
+        if title:
+            # Check title length
+            if len(title) > 200:
+                raise ValidationError("Title is too long (max 200 characters).")
+        
+        return title
 
-        return instance
 
-
-# ---------------------------------------
-# Circle Join Form
-# ---------------------------------------
-class CircleJoinForm(forms.Form):
-    join_code = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'join-code-input',
-            'placeholder': 'Enter join code if required'
-        }),
-        max_length=20
-    )
-
-    introduction = forms.CharField(
-        required=False,
+class QuickEncouragementForm(forms.Form):
+    """
+    Form for sending quick encouragement
+    """
+    
+    message = forms.CharField(
         widget=forms.Textarea(attrs={
+            'class': 'form-control',
             'rows': 3,
-            'class': 'introduction-textarea',
-            'placeholder': 'Brief introduction (optional)...'
-        }),
-        max_length=300
-    )
-
-    notification_preferences = JSONField(
-        initial={'new_messages': True, 'meeting_reminders': True},
-        widget=forms.HiddenInput()
-    )
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        circle = getattr(self, 'circle', None)
-
-        if circle and not circle.is_public:
-            code = cleaned_data.get('join_code', '')
-            if code != circle.join_code:
-                raise ValidationError("Invalid join code")
-
-        return cleaned_data
-
-
-# ---------------------------------------
-# Achievement Share Form
-# ---------------------------------------
-class AchievementShareForm(forms.Form):
-
-    share_publicly = forms.BooleanField(
-        initial=True,
-        widget=forms.CheckboxInput(attrs={'class': 'share-checkbox'})
-    )
-
-    reflection = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={
-            'rows': 4,
-            'class': 'achievement-reflection',
-            'placeholder': 'What does earning this achievement mean to you?...'
+            'placeholder': 'Share some encouraging words...'
         }),
         max_length=500
     )
-
-    include_encouragement = forms.BooleanField(
-        initial=True,
-        widget=forms.CheckboxInput(attrs={'class': 'encouragement-checkbox'})
+    recipient_id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput()
     )
+    anonymous = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    def clean_message(self):
+        message = self.cleaned_data.get('message', '')
+        
+        if len(message.strip()) < 5:
+            raise ValidationError("Please write a meaningful message.")
+        
+        return message.strip()
 
-    def share_achievement(self, user_achievement):
-        if self.cleaned_data['share_publicly']:
-            message = f"I just earned {user_achievement.achievement.name}!"
 
-            if self.cleaned_data['reflection']:
-                message += f" {self.cleaned_data['reflection']}"
-
-            if self.cleaned_data['include_encouragement']:
-                message += f" {user_achievement.achievement.therapeutic_message}"
-
-            interaction = GentleInteraction.objects.create(
-                sender=user_achievement.user,
-                interaction_type='achievement',
-                title=f"Achievement: {user_achievement.achievement.name}",
-                message=message,
-                visibility='community'
+class SupportCircleForm(forms.ModelForm):
+    """
+    Form for creating support circles
+    """
+    
+    class Meta:
+        model = SupportCircle
+        fields = [
+            'name', 'description', 'focus_areas',
+            'max_members', 'is_public', 'allow_anonymous',
+            'join_code'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Circle name...'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Describe the purpose of this circle...'
+            }),
+            'focus_areas': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g., anxiety, stress, self-care'
+            }),
+            'max_members': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 5,
+                'max': 100
+            }),
+            'is_public': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'allow_anonymous': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'join_code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Optional join code for private circles'
+            }),
+        }
+    
+    def clean_max_members(self):
+        max_members = self.cleaned_data.get('max_members')
+        
+        if max_members < 5:
+            raise ValidationError("Support circles must have at least 5 member capacity.")
+        if max_members > 100:
+            raise ValidationError("Support circles cannot have more than 100 members.")
+        
+        return max_members
+    
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '').strip()
+        
+        if not name:
+            raise ValidationError("Circle name is required.")
+        
+        if len(name) > 100:
+            raise ValidationError("Circle name is too long (max 100 characters).")
+        
+        return name
+    
+    def clean_join_code(self):
+        join_code = self.cleaned_data.get('join_code', '').strip()
+        is_public = self.cleaned_data.get('is_public', True)
+        
+        if not is_public and not join_code:
+            raise ValidationError(
+                "Private circles require a join code."
             )
+        
+        return join_code
 
-            user_achievement.shared_publicly = True
-            user_achievement.reflection_notes = self.cleaned_data['reflection']
-            user_achievement.save()
 
-            return interaction
+class CircleJoinForm(forms.Form):
+    """
+    Form for joining a support circle
+    """
+    
+    join_code = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter join code...'
+        })
+    )
+    introduction = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'Tell the circle a bit about yourself...'
+        }),
+        max_length=500
+    )
+    
+    def __init__(self, *args, **kwargs):
+        self.circle = kwargs.pop('circle', None)
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        # Only require join code for private circles
+        if self.circle and self.circle.is_public:
+            self.fields['join_code'].required = False
+            self.fields['join_code'].widget = forms.HiddenInput()
+        else:
+            self.fields['join_code'].required = True
+    
+    def clean_join_code(self):
+        join_code = self.cleaned_data.get('join_code', '').strip()
+        
+        if self.circle and not self.circle.is_public:
+            if join_code != self.circle.join_code:
+                raise ValidationError("Invalid join code.")
+        
+        return join_code
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Check if user is already a member
+        if self.user and self.circle:
+            if CircleMembership.objects.filter(
+                circle=self.circle,
+                user=self.user
+            ).exists():
+                raise ValidationError("You are already a member of this circle.")
+            
+            # Check if circle is full
+            if self.circle.active_members >= self.circle.max_members:
+                raise ValidationError("This support circle is full.")
+        
+        return cleaned_data
 
-        return None
+
+class AchievementShareForm(forms.Form):
+    """
+    Form for sharing achievements
+    """
+    
+    reflection = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 3,
+            'placeholder': 'What does this achievement mean to you?'
+        }),
+        max_length=1000
+    )
+    share_publicly = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )

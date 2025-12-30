@@ -1,0 +1,423 @@
+{% extends 'social/base.html' %}
+
+{% block social_title %}My Achievements - Therapeutic Social{% endblock %}
+
+{% block social_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- User Achievements Header -->
+        <div class="social-card mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-2">
+                        <i class="fas fa-trophy me-2"></i>My Therapeutic Achievements
+                    </h2>
+                    <p class="text-muted mb-0">
+                        Celebrating your growth and progress
+                    </p>
+                </div>
+                <div class="text-end">
+                    <div class="h4 mb-0">{{ total_achievements }}</div>
+                    <small class="text-muted">Total earned</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievement Progress -->
+        <div class="social-card mb-4">
+            <div class="social-card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Achievement Progress
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-4">
+                    <div class="col-md-4">
+                        <div class="stat-widget">
+                            <div class="stat-number bronze">{{ bronze_count }}</div>
+                            <div class="stat-label">Bronze</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-widget">
+                            <div class="stat-number silver">{{ silver_count }}</div>
+                            <div class="stat-label">Silver</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-widget">
+                            <div class="stat-number gold">{{ gold_count }}</div>
+                            <div class="stat-label">Gold</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-2">
+                        Overall Achievement Progress: {{ progress_percentage }}%
+                    </small>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-bronze" style="width: {{ bronze_percentage }}%">
+                            Bronze
+                        </div>
+                        <div class="progress-bar bg-silver" style="width: {{ silver_percentage }}%">
+                            Silver
+                        </div>
+                        <div class="progress-bar bg-gold" style="width: {{ gold_percentage }}%">
+                            Gold
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Achievements Grid -->
+        <div class="row" id="achievementsGrid">
+            {% for user_achievement in user_achievements %}
+            <div class="col-md-6 mb-4">
+                <div class="social-card h-100">
+                    <div class="d-flex align-items-start">
+                        <div class="achievement-icon {{ user_achievement.achievement.tier }} me-3">
+                            {% if user_achievement.achievement.tier == 'gold' %}
+                            <i class="fas fa-crown"></i>
+                            {% elif user_achievement.achievement.tier == 'silver' %}
+                            <i class="fas fa-medal"></i>
+                            {% else %}
+                            <i class="fas fa-award"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="mb-1">{{ user_achievement.achievement.name }}</h5>
+                                    <small class="text-muted">
+                                        {{ user_achievement.achievement.get_tier_display }} Tier • 
+                                        Earned {{ user_achievement.earned_at|date:"F j, Y" }}
+                                    </small>
+                                </div>
+                                {% if user_achievement.shared_publicly %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-share-alt"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <p class="mb-3">{{ user_achievement.achievement.description }}</p>
+                            
+                            <!-- Reflection Notes -->
+                            {% if user_achievement.reflection_notes %}
+                            <div class="therapeutic-message mb-3">
+                                <strong><i class="fas fa-heart me-1"></i>Your Reflection:</strong>
+                                <div style="white-space: pre-line; font-size: 0.9rem;">
+                                    {{ user_achievement.reflection_notes }}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-users me-1"></i>
+                                    {{ user_achievement.achievement.total_earners }} people earned this
+                                </small>
+                                <div class="btn-group">
+                                    {% if not user_achievement.reflection_notes %}
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#addReflectionModal{{ user_achievement.id }}">
+                                        <i class="fas fa-edit me-1"></i>Add Reflection
+                                    </button>
+                                    {% endif %}
+                                    {% if user_achievement.shared_publicly %}
+                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-share-alt me-1"></i>Shared
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-info" 
+                                            onclick="shareAchievement({{ user_achievement.id }})">
+                                        <i class="fas fa-share-alt me-1"></i>Share
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Add Reflection Modal -->
+                <div class="modal fade" id="addReflectionModal{{ user_achievement.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-edit me-2"></i>Add Reflection
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="reflectionForm{{ user_achievement.id }}">
+                                    <div class="mb-3">
+                                        <label class="form-label">What does this achievement mean to you?</label>
+                                        <textarea class="form-control" 
+                                                  id="reflection{{ user_achievement.id }}" 
+                                                  rows="4" 
+                                                  placeholder="Share your thoughts and feelings about earning this achievement..."></textarea>
+                                        <div class="form-text">
+                                            This is for your personal growth and reflection.
+                                        </div>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="shareReflection{{ user_achievement.id }}">
+                                        <label class="form-check-label" for="shareReflection{{ user_achievement.id }}">
+                                            Share reflection publicly (optional)
+                                        </label>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" 
+                                        onclick="saveReflection({{ user_achievement.id }})">
+                                    <i class="fas fa-save me-2"></i>Save Reflection
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="social-card text-center py-5">
+                    <i class="fas fa-star fa-3x text-muted mb-3"></i>
+                    <h4>No achievements yet</h4>
+                    <p class="text-muted mb-4">
+                        Start participating in the community to earn therapeutic achievements!
+                    </p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{% url 'community-home' %}" class="btn btn-primary me-md-2">
+                            <i class="fas fa-users me-2"></i>Go to Community
+                        </a>
+                        <a href="{% url 'circles-list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-hands-helping me-2"></i>Join Support Circles
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Next Achievements -->
+        <div class="social-card mb-4">
+            <div class="social-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bullseye me-2"></i>Next Achievements
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if next_achievements %}
+                    {% for achievement in next_achievements|slice:":3" %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <h6 class="mb-1">{{ achievement.name }}</h6>
+                        <small class="text-muted d-block mb-2">
+                            {{ achievement.description }}
+                        </small>
+                        <span class="badge bg-{{ achievement.tier }}">
+                            {{ achievement.get_tier_display }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="text-center mt-3">
+                        <a href="{% url 'achievements-list' %}" class="btn btn-outline-primary btn-sm">
+                            View All Achievements
+                        </a>
+                    </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-trophy fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No more achievements available</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Achievement Stats -->
+        <div class="social-card mb-4">
+            <div class="social-card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Achievement Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted d-block">Earliest Achievement</small>
+                    <strong>{{ earliest_achievement.earned_at|date:"F j, Y" }}</strong>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Latest Achievement</small>
+                    <strong>{{ latest_achievement.earned_at|date:"F j, Y" }}</strong>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Achievement Streak</small>
+                    <strong>{{ achievement_streak }} days</strong>
+                </div>
+                <div>
+                    <small class="text-muted d-block">Community Rank</small>
+                    <strong>Top {{ community_rank_percentile }}%</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Your Progress -->
+        <div class="social-card">
+            <h5 class="mb-3">
+                <i class="fas fa-share-alt me-2"></i>Share Your Progress
+            </h5>
+            <div class="alert alert-info">
+                <p class="mb-3">
+                    Sharing your achievements can inspire others and reinforce your own progress.
+                </p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="shareAllAchievements()">
+                        <i class="fas fa-share-alt me-2"></i>Share Progress Summary
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.progress-bar.bg-bronze {
+    background-color: #cd7f32 !important;
+}
+
+.progress-bar.bg-silver {
+    background-color: #c0c0c0 !important;
+}
+
+.progress-bar.bg-gold {
+    background-color: #ffd700 !important;
+    color: #333;
+}
+
+.stat-number.bronze {
+    color: #cd7f32;
+}
+
+.stat-number.silver {
+    color: #c0c0c0;
+}
+
+.stat-number.gold {
+    color: #ffd700;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    // Save reflection
+    function saveReflection(achievementId) {
+        const reflection = document.getElementById(`reflection${achievementId}`).value;
+        const sharePublicly = document.getElementById(`shareReflection${achievementId}`).checked;
+        
+        if (!reflection.trim()) {
+            alert('Please enter your reflection');
+            return;
+        }
+        
+        fetch(`/api/achievements/${achievementId}/add-reflection/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                reflection: reflection,
+                share_publicly: sharePublicly
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Reflection saved successfully!', 'success');
+                $(`#addReflectionModal${achievementId}`).modal('hide');
+                
+                // Reload to show reflection
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to save reflection');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'error');
+        });
+    }
+    
+    // Share achievement
+    function shareAchievement(achievementId) {
+        if (!confirm('Share this achievement with the community?')) {
+            return;
+        }
+        
+        fetch(`/api/achievements/${achievementId}/share/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Achievement shared with the community!', 'success');
+                
+                // Reload to update UI
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                throw new Error(data.error || 'Failed to share achievement');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'error');
+        });
+    }
+    
+    // Share all achievements
+    function shareAllAchievements() {
+        fetch('/api/achievements/share-progress/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Your progress has been shared with the community!', 'success');
+            } else {
+                throw new Error(data.error || 'Failed to share progress');
+            }
+        })
+        .catch(error => {
+            showNotification('Error: ' + error.message, 'error');
+        });
+    }
+</script>
+{% endblock %}

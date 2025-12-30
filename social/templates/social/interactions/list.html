@@ -1,0 +1,147 @@
+{% extends 'social/base.html' %}
+
+{% block social_title %}All Interactions - Therapeutic Social{% endblock %}
+
+{% block social_content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-comments me-2"></i>All Community Interactions</h2>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-filter me-2"></i>Filter by Type
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">All Types</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#">Encouragements</a></li>
+                    <li><a class="dropdown-item" href="#">Questions</a></li>
+                    <li><a class="dropdown-item" href="#">Personal Shares</a></li>
+                    <li><a class="dropdown-item" href="#">Support Requests</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Interaction filters -->
+        <div class="social-card mb-4">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" placeholder="Search interactions..." id="searchInput">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="sortSelect">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="most_liked">Most Liked</option>
+                        <option value="most_commented">Most Replied</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="visibilitySelect">
+                        <option value="all">All Visibility</option>
+                        <option value="public">Public Only</option>
+                        <option value="community">Community Only</option>
+                        <option value="circle">My Circles Only</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-search me-2"></i>Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Interactions list will be loaded here via JavaScript -->
+        <div id="interactions-container" class="mb-4">
+            <!-- Interactions will be dynamically loaded -->
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading interactions...</span>
+                </div>
+                <p class="mt-3">Loading community interactions...</p>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <nav id="pagination" aria-label="Interaction pagination">
+            <!-- Pagination will be dynamically generated -->
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadInteractions(1);
+    });
+    
+    function loadInteractions(page) {
+        const container = document.getElementById('interactions-container');
+        const pagination = document.getElementById('pagination');
+        
+        // Show loading state
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading interactions...</span>
+                </div>
+                <p class="mt-3">Loading community interactions...</p>
+            </div>
+        `;
+        
+        // Simulate API call
+        setTimeout(() => {
+            // In a real app, this would fetch from your API endpoint
+            container.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This would display a paginated list of interactions from your API.
+                    <br><small>In a real implementation, you would make an AJAX call to your Django REST API.</small>
+                </div>
+                
+                <!-- Example interaction (remove in production) -->
+                <div class="social-card mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="user-avatar me-3">A</div>
+                        <div class="flex-grow-1">
+                            <h5>Example User <small class="text-muted">2 hours ago</small></h5>
+                            <p>This is an example interaction from the API.</p>
+                            <div class="d-flex justify-content-between">
+                                <span class="badge bg-success">Encouragement</span>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-thumbs-up"></i> Like
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Example pagination
+            pagination.innerHTML = `
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item"><a class="page-link" href="#">Next</a></li>
+                </ul>
+            `;
+        }, 1000);
+    }
+    
+    function applyFilters() {
+        const search = document.getElementById('searchInput').value;
+        const sort = document.getElementById('sortSelect').value;
+        const visibility = document.getElementById('visibilitySelect').value;
+        
+        console.log('Applying filters:', { search, sort, visibility });
+        loadInteractions(1);
+    }
+</script>
+{% endblock %}

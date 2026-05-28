@@ -96,6 +96,14 @@ class TherapeuticUser(AbstractUser):
         blank=True,
         help_text="List of dates and descriptions of breakthrough moments"
     )
+
+    # Account lock for therapeutic safety (persistent)
+    account_locked_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="If set, the account is locked until this timestamp for therapeutic reasons",
+    )
     
     # Avatar and personalization
     avatar_color = models.CharField(max_length=7, default='#3498db')  # Hex color

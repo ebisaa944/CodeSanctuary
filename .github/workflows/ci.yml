@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports: [6379]
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: therapeutic
+        ports: [5432]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/therapeutic
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          python manage.py migrate --noinput
+      - name: Collect static files
+        run: |
+          python manage.py collectstatic --noinput
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/therapeutic
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          pytest -q --maxfail=1
+      - name: Validate /health/ endpoint (Django test client)
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/therapeutic
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          python - <<'PY'
+from django.test import Client
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE','therapeutic_coding.settings')
+import django
+django.setup()
+c=Client()
+resp=c.get('/health/')
+print('health status', resp.status_code, resp.json())
+if resp.status_code!=200:
+    raise SystemExit(1)
+PY
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: myorg/therapeutic:latest

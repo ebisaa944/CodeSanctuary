@@ -1,0 +1,933 @@
+{% extends "chat/base.html" %}
+{% load static %}
+
+{% block chat_title %}{{ room.name }} | Therapeutic Chat{% endblock %}
+
+{% block chat_page_title %}{{ room.name }}{% endblock %}
+
+{% block chat_page_subtitle %}{{ room.description }}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'chat/css/chat-room.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'chat/js/chat-room.js' %}" defer></script>
+{% endblock %}
+
+{% block chat_content %}
+<div class="chat-room-container" data-room-id="{{ room.id }}" data-room-type="{{ room.room_type }}">
+    <!-- Room Header -->
+    <div class="room-header card therapy-card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center">
+                        <div class="room-icon-large me-3">
+                            {% if room.room_type == 'therapy_session' %}
+                            <i class="fas fa-heart-circle-check fa-2x text-therapy-primary"></i>
+                            {% elif room.room_type == 'peer_support' %}
+                            <i class="fas fa-hands-helping fa-2x text-therapy-secondary"></i>
+                            {% elif room.room_type == 'learning_group' %}
+                            <i class="fas fa-graduation-cap fa-2x text-therapy-info"></i>
+                            {% else %}
+                            <i class="fas fa-comments fa-2x text-therapy-safe"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h2 class="room-title mb-1">{{ room.name }}</h2>
+                            <div class="room-meta">
+                                <span class="badge bg-{% if room.safety_level == 'safe_space' %}success{% elif room.safety_level == 'supportive' %}info{% else %}warning{% endif %} me-2">
+                                    {{ room.get_safety_level_display }}
+                                </span>
+                                <span class="badge bg-therapy-secondary me-2">
+                                    <i class="fas fa-users"></i> {{ room.participant_count }} active
+                                </span>
+                                <span class="badge bg-therapy-primary">
+                                    Max stress: {{ room.max_stress_level }}/10
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="room-actions">
+                        {% if is_member %}
+                        <button class="btn btn-therapy-outline" id="leaveRoomBtn" data-bs-toggle="modal" data-bs-target="#leaveRoomModal">
+                            <i class="fas fa-sign-out-alt"></i> Leave Room
+                        </button>
+                        {% else %}
+                        <button class="btn btn-therapy-primary" id="joinRoomBtn" data-bs-toggle="modal" data-bs-target="#joinRoomModal">
+                            <i class="fas fa-door-open"></i> Join Room
+                        </button>
+                        {% endif %}
+                        
+                        {% if is_moderator %}
+                        <div class="dropdown d-inline-block ms-2">
+                            <button class="btn btn-therapy-secondary dropdown-toggle" type="button" 
+                                    id="roomManagementDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-cog"></i> Manage
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="roomManagementDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editRoomModal">
+                                        <i class="fas fa-edit me-2"></i> Edit Room
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                                        <i class="fas fa-user-plus me-2"></i> Invite Users
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#moderationModal">
+                                        <i class="fas fa-shield-alt me-2"></i> Moderation Tools
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#archiveRoomModal">
+                                        <i class="fas fa-archive me-2"></i> Archive Room
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Room Description -->
+            <div class="room-description mt-3">
+                <p>{{ room.description }}</p>
+                
+                {% if room.therapeutic_goal %}
+                <div class="therapeutic-goal alert alert-therapy-info mt-3">
+                    <h6><i class="fas fa-bullseye me-2"></i>Therapeutic Goal:</h6>
+                    <p class="mb-0">{{ room.therapeutic_goal }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Room Guidelines -->
+            {% if room.conversation_guidelines %}
+            <div class="room-guidelines mt-3">
+                <button class="btn btn-sm btn-outline-therapy" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#guidelinesCollapse">
+                    <i class="fas fa-scroll me-1"></i> Conversation Guidelines
+                </button>
+                
+                <div class="collapse mt-2" id="guidelinesCollapse">
+                    <div class="card card-body therapy-guidelines">
+                        <h6>Guidelines for this therapeutic space:</h6>
+                        <ul class="mb-0">
+                            {% for guideline in room.conversation_guidelines %}
+                            <li>{{ guideline }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Main Chat Area -->
+    <div class="row">
+        <!-- Chat Messages Column -->
+        <div class="col-lg-8">
+            <div class="card therapy-card chat-messages-container">
+                <div class="card-header bg-therapy-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Conversation
+                    </h5>
+                    
+                    <div class="chat-controls">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" 
+                                    id="chatFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="chatFilterDropdown">
+                                <li>
+                                    <a class="dropdown-item" href="#" data-filter="all">
+                                        <i class="fas fa-layer-group me-2"></i> All Messages
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-filter="vulnerable">
+                                        <i class="fas fa-shield-heart me-2"></i> Vulnerable Shares
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-filter="coping">
+                                        <i class="fas fa-hands-helping me-2"></i> Coping Strategies
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-filter="affirmation">
+                                        <i class="fas fa-heart me-2"></i> Affirmations
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-filter="unread">
+                                        <i class="fas fa-envelope me-2"></i> Unread Only
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <button class="btn btn-sm btn-outline-light ms-2" id="refreshMessages">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        
+                        {% if room.mood_tracking_enabled %}
+                        <button class="btn btn-sm btn-outline-light ms-2" id="moodCheckinBtn">
+                            <i class="fas fa-brain"></i> Mood Check
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Messages Container -->
+                <div class="card-body p-0">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Messages loaded via WebSocket/JS -->
+                        <div class="loading-messages text-center py-5">
+                            <div class="spinner-border text-therapy-primary" role="status">
+                                <span class="visually-hidden">Loading messages...</span>
+                            </div>
+                            <p class="mt-3">Loading therapeutic conversation...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Typing Indicator -->
+                    <div class="typing-indicator-container" id="typingIndicator">
+                        <!-- Typing indicators appear here -->
+                    </div>
+                    
+                    <!-- Message Input -->
+                    {% if is_member and not membership.is_muted %}
+                    <div class="message-input-container">
+                        <form id="messageForm" class="message-form">
+                            <div class="input-group">
+                                <!-- Therapeutic Message Options -->
+                                <button class="btn btn-outline-therapy" type="button" 
+                                        id="messageOptionsToggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-plus-circle"></i>
+                                </button>
+                                <ul class="dropdown-menu message-options-dropdown">
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-option="vulnerable">
+                                            <i class="fas fa-shield-heart me-2 text-therapy-warning"></i>
+                                            Mark as Vulnerable Share
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-option="coping">
+                                            <i class="fas fa-hands-helping me-2 text-therapy-secondary"></i>
+                                            Share Coping Strategy
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-option="affirmation">
+                                            <i class="fas fa-heart me-2 text-therapy-safe"></i>
+                                            Add Affirmation
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-option="trigger-warning">
+                                            <i class="fas fa-exclamation-triangle me-2 text-therapy-warning"></i>
+                                            Add Trigger Warning
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" data-option="anonymous">
+                                            <i class="fas fa-user-secret me-2 text-muted"></i>
+                                            Send Anonymously
+                                        </a>
+                                    </li>
+                                </ul>
+                                
+                                <!-- Main Message Input -->
+                                <textarea class="form-control message-input" 
+                                          id="messageInput" 
+                                          rows="1" 
+                                          placeholder="Type your therapeutic message here..."
+                                          aria-label="Message input"
+                                          maxlength="5000"></textarea>
+                                
+                                <!-- Emotional Tone Selector -->
+                                <div class="emotional-tone-selector" id="emotionalToneSelector">
+                                    <button class="btn btn-sm btn-outline-therapy" type="button"
+                                            data-bs-toggle="dropdown" aria-label="Select emotional tone">
+                                        <i class="fas fa-smile"></i>
+                                    </button>
+                                    <div class="dropdown-menu emotional-tone-dropdown">
+                                        <div class="dropdown-header">
+                                            <small>How are you feeling?</small>
+                                        </div>
+                                        <div class="emotional-tone-options">
+                                            <button type="button" class="tone-option" data-tone="hopeful">
+                                                <i class="fas fa-sun"></i> Hopeful
+                                            </button>
+                                            <button type="button" class="tone-option" data-tone="calm">
+                                                <i class="fas fa-wind"></i> Calm
+                                            </button>
+                                            <button type="button" class="tone-option" data-tone="anxious">
+                                                <i class="fas fa-cloud"></i> Anxious
+                                            </button>
+                                            <button type="button" class="tone-option" data-tone="proud">
+                                                <i class="fas fa-trophy"></i> Proud
+                                            </button>
+                                            <button type="button" class="tone-option" data-tone="vulnerable">
+                                                <i class="fas fa-heart-crack"></i> Vulnerable
+                                            </button>
+                                            <button type="button" class="tone-option" data-tone="supportive">
+                                                <i class="fas fa-hands-holding-heart"></i> Supportive
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Send Button -->
+                                <button class="btn btn-therapy-primary" type="submit" id="sendMessageBtn">
+                                    <i class="fas fa-paper-plane"></i>
+                                    <span class="d-none d-md-inline">Send</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Therapeutic Message Options Display -->
+                            <div class="message-options-display mt-2" id="messageOptionsDisplay">
+                                <!-- Active options appear here -->
+                            </div>
+                            
+                            <!-- Character Counter -->
+                            <div class="message-meta d-flex justify-content-between mt-2">
+                                <small class="text-muted">
+                                    <span id="charCount">0</span>/5000 characters
+                                </small>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span id="typingTime">0s</span> typing
+                                </small>
+                            </div>
+                        </form>
+                    </div>
+                    {% elif is_member and membership.is_muted %}
+                    <div class="alert alert-warning m-3">
+                        <i class="fas fa-volume-mute me-2"></i>
+                        You are currently muted in this room and cannot send messages.
+                        <small class="d-block mt-1">Muted until: {{ membership.muted_until|default:"Indefinitely" }}</small>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info m-3">
+                        <i class="fas fa-door-closed me-2"></i>
+                        Join this room to participate in the conversation.
+                        <button class="btn btn-sm btn-therapy-primary mt-2" 
+                                data-bs-toggle="modal" data-bs-target="#joinRoomModal">
+                            Join Room
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Therapeutic Room Features -->
+            {% if room.mood_tracking_enabled or room.trigger_warnings_required %}
+            <div class="room-features mt-4">
+                <div class="row">
+                    {% if room.mood_tracking_enabled %}
+                    <div class="col-md-6">
+                        <div class="card therapy-card h-100">
+                            <div class="card-header bg-therapy-secondary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-brain me-2"></i>Mood Tracking
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mood-tracker" id="moodTracker">
+                                    <p class="small">Track how conversations affect your mood</p>
+                                    <div class="mood-scale">
+                                        {% for i in "12345"|make_list %}
+                                        <button class="mood-level" data-level="{{ forloop.counter }}">
+                                            {{ forloop.counter }}
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                    <small class="text-muted">1 = Distressed, 5 = Calm</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if room.trigger_warnings_required %}
+                    <div class="col-md-6">
+                        <div class="card therapy-card h-100">
+                            <div class="card-header bg-therapy-safe text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-shield-heart me-2"></i>Trigger Safety
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="small">This room requires trigger warnings for sensitive content.</p>
+                                <div class="trigger-warning-examples">
+                                    <small class="text-muted">Examples:</small>
+                                    <ul class="small mb-0">
+                                        <li>Mentions of trauma</li>
+                                        <li>Discussions of self-harm</li>
+                                        <li>References to abuse</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar Column -->
+        <div class="col-lg-4">
+            <!-- Room Members -->
+            <div class="card therapy-card mb-4">
+                <div class="card-header bg-therapy-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Room Members
+                        <span class="badge bg-light text-therapy-secondary float-end">{{ room.participant_count }}</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="room-members-list" id="roomMembersList">
+                        <!-- Members loaded via AJAX -->
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-therapy-secondary" role="status">
+                                <span class="visually-hidden">Loading members...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Room Statistics -->
+            <div class="card therapy-card mb-4">
+                <div class="card-header bg-therapy-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Room Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="room-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Messages</div>
+                            <div class="stat-value">{{ stats.total_messages }}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Vulnerable Shares</div>
+                            <div class="stat-value text-therapy-warning">{{ stats.vulnerable_shares }}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Coping Strategies</div>
+                            <div class="stat-value text-therapy-secondary">{{ stats.coping_strategies }}</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Avg. Stress Level</div>
+                            <div class="stat-value">{{ stats.avg_stress_level }}/10</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Activity Chart -->
+                    <div class="activity-chart mt-3">
+                        <canvas id="roomActivityChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Therapeutic Resources -->
+            <div class="card therapy-card">
+                <div class="card-header bg-therapy-safe text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-hands-helping me-2"></i>Therapeutic Resources
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="resources-list">
+                        <a href="#" class="resource-item" data-bs-toggle="modal" data-bs-target="#groundingModal">
+                            <i class="fas fa-mountain"></i>
+                            <span>Grounding Techniques</span>
+                        </a>
+                        <a href="#" class="resource-item" data-bs-toggle="modal" data-bs-target="#copingModal">
+                            <i class="fas fa-brain"></i>
+                            <span>Coping Strategies</span>
+                        </a>
+                        <a href="#" class="resource-item" data-bs-toggle="modal" data-bs-target="#safetyPlanModal">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Safety Plan</span>
+                        </a>
+                        <a href="#" class="resource-item" data-bs-toggle="modal" data-bs-target="#breathingModal">
+                            <i class="fas fa-wind"></i>
+                            <span>Breathing Exercises</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Comfort Level Indicator -->
+            {% if is_member %}
+            <div class="card therapy-card mt-4">
+                <div class="card-header bg-therapy-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-heart me-2"></i>Your Comfort Level
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="comfort-level-indicator">
+                        <div class="comfort-scale">
+                            {% for i in "12345"|make_list %}
+                            <div class="comfort-level {% if membership.comfort_level >= forloop.counter %}active{% endif %}"
+                                 data-level="{{ forloop.counter }}">
+                                {{ forloop.counter }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="comfort-labels d-flex justify-content-between mt-2">
+                            <small class="text-muted">Uncomfortable</small>
+                            <small class="text-muted">Feeling Safe</small>
+                        </div>
+                        
+                        <button class="btn btn-sm btn-outline-therapy mt-3 w-100" 
+                                id="updateComfortBtn">
+                            <i class="fas fa-sliders-h me-1"></i> Update Comfort Level
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Therapeutic Modals -->
+{% include "chat/modals/join_room_modal.html" %}
+{% include "chat/modals/leave_room_modal.html" %}
+{% include "chat/modals/therapeutic_resources_modal.html" %}
+{% include "chat/modals/comfort_update_modal.html" %}
+
+{% if is_moderator %}
+{% include "chat/modals/room_management_modal.html" %}
+{% include "chat/modals/moderation_tools_modal.html" %}
+{% endif %}
+{% endblock %}
+
+{% block extra_footer_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize chat room
+        const roomId = '{{ room.id }}';
+        const userId = '{{ user.id }}';
+        const isMember = {% if is_member %}true{% else %}false{% endif %};
+        
+        if (isMember) {
+            // Initialize WebSocket connection
+            initializeRoomWebSocket(roomId, userId);
+            
+            // Load initial messages
+            loadRoomMessages(roomId);
+            
+            // Load room members
+            loadRoomMembers(roomId);
+            
+            // Initialize message input
+            initializeMessageInput();
+            
+            // Initialize therapeutic features
+            initializeTherapeuticFeatures();
+        }
+        
+        // Initialize room statistics chart
+        initializeRoomChart();
+        
+        // Handle comfort level update
+        const updateComfortBtn = document.getElementById('updateComfortBtn');
+        if (updateComfortBtn) {
+            updateComfortBtn.addEventListener('click', function() {
+                showComfortUpdateModal();
+            });
+        }
+        
+        // Handle room filters
+        document.querySelectorAll('[data-filter]').forEach(filter => {
+            filter.addEventListener('click', function(e) {
+                e.preventDefault();
+                const filterType = this.dataset.filter;
+                applyMessageFilter(filterType);
+            });
+        });
+        
+        // Handle refresh
+        document.getElementById('refreshMessages').addEventListener('click', function() {
+            loadRoomMessages(roomId);
+        });
+    });
+    
+    function initializeRoomWebSocket(roomId, userId) {
+        // Connect to WebSocket for real-time updates
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/room/${roomId}/`;
+        
+        const chatSocket = new WebSocket(wsUrl);
+        
+        chatSocket.onopen = function(e) {
+            console.log('WebSocket connected to room', roomId);
+            
+            // Send authentication
+            chatSocket.send(JSON.stringify({
+                'type': 'auth',
+                'user_id': userId,
+                'room_id': roomId
+            }));
+        };
+        
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            handleWebSocketMessage(data);
+        };
+        
+        chatSocket.onclose = function(e) {
+            console.log('WebSocket disconnected');
+            // Attempt to reconnect after delay
+            setTimeout(() => initializeRoomWebSocket(roomId, userId), 3000);
+        };
+        
+        // Store socket globally for sending messages
+        window.chatSocket = chatSocket;
+    }
+    
+    function handleWebSocketMessage(data) {
+        switch(data.type) {
+            case 'new_message':
+                appendNewMessage(data.message);
+                break;
+            case 'message_updated':
+                updateMessage(data.message);
+                break;
+            case 'message_deleted':
+                removeMessage(data.message_id);
+                break;
+            case 'typing_indicator':
+                showTypingIndicator(data.user_id, data.username, data.is_typing);
+                break;
+            case 'presence_update':
+                updateUserPresence(data.user_id, data.status);
+                break;
+            case 'reaction_added':
+                updateMessageReactions(data.message_id, data.reactions);
+                break;
+            case 'room_updated':
+                updateRoomInfo(data.room);
+                break;
+        }
+    }
+    
+    function loadRoomMessages(roomId) {
+        fetch(`/chat/api/rooms/${roomId}/messages/`)
+            .then(response => response.json())
+            .then(data => {
+                displayMessages(data.messages);
+            })
+            .catch(error => {
+                console.error('Error loading messages:', error);
+            });
+    }
+    
+    function displayMessages(messages) {
+        const messagesContainer = document.getElementById('chatMessages');
+        messagesContainer.innerHTML = '';
+        
+        messages.forEach(message => {
+            const messageElement = createMessageElement(message);
+            messagesContainer.appendChild(messageElement);
+        });
+        
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    function createMessageElement(message) {
+        // Create message element based on message data
+        const div = document.createElement('div');
+        div.className = `chat-message ${message.is_vulnerable_share ? 'vulnerable-message' : ''}`;
+        div.dataset.messageId = message.id;
+        
+        // Use template literal to construct HTML
+        div.innerHTML = `
+            <div class="message-header">
+                <div class="sender-avatar" style="background-color: ${message.user.avatar_color};">
+                    ${message.user.username.charAt(0).toUpperCase()}
+                </div>
+                <div class="sender-info">
+                    <strong>${escapeHtml(message.user.username)}</strong>
+                    <small class="text-muted">${formatTime(message.created_at)}</small>
+                </div>
+                <div class="message-meta">
+                    ${message.is_vulnerable_share ? 
+                        '<span class="badge bg-therapy-warning"><i class="fas fa-shield-heart"></i> Vulnerable</span>' : ''}
+                    ${message.contains_affirmation ? 
+                        '<span class="badge bg-therapy-safe"><i class="fas fa-heart"></i> Affirmation</span>' : ''}
+                    ${message.coping_strategy_shared ? 
+                        '<span class="badge bg-therapy-secondary"><i class="fas fa-hands-helping"></i> Coping</span>' : ''}
+                </div>
+            </div>
+            <div class="message-content">
+                ${message.trigger_warning ? 
+                    `<div class="trigger-warning-alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Trigger Warning:</strong> ${escapeHtml(message.trigger_warning)}
+                    </div>` : ''}
+                <p>${escapeHtml(message.content)}</p>
+            </div>
+            <div class="message-reactions">
+                <!-- Reactions will be added here -->
+            </div>
+            <div class="message-actions">
+                <button class="btn btn-sm btn-outline-therapy reaction-btn" 
+                        data-message-id="${message.id}">
+                    <i class="fas fa-heart"></i> Support
+                </button>
+                ${message.user.id === {{ user.id|escapejs }} ? 
+                    `<button class="btn btn-sm btn-outline-therapy edit-btn" 
+                            data-message-id="${message.id}">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>` : ''}
+            </div>
+        `;
+        
+        return div;
+    }
+    
+    function initializeMessageInput() {
+        const messageInput = document.getElementById('messageInput');
+        const messageForm = document.getElementById('messageForm');
+        const charCount = document.getElementById('charCount');
+        
+        // Character counter
+        messageInput.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+            
+            // Auto-resize textarea
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            
+            // Send typing indicator
+            sendTypingIndicator(true);
+        });
+        
+        // Send message on Enter (without Shift)
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                messageForm.dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // Form submission
+        messageForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            sendMessage();
+        });
+        
+        // Therapeutic message options
+        document.querySelectorAll('[data-option]').forEach(option => {
+            option.addEventListener('click', function(e) {
+                e.preventDefault();
+                const optionType = this.dataset.option;
+                toggleMessageOption(optionType);
+            });
+        });
+        
+        // Emotional tone selection
+        document.querySelectorAll('.tone-option').forEach(tone => {
+            tone.addEventListener('click', function() {
+                const toneValue = this.dataset.tone;
+                selectEmotionalTone(toneValue);
+            });
+        });
+    }
+    
+    function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        const message = messageInput.value.trim();
+        
+        if (!message) return;
+        
+        // Collect therapeutic options
+        const options = {
+            is_vulnerable_share: document.querySelector('[data-option="vulnerable"]')?.classList.contains('active') || false,
+            coping_strategy_shared: document.querySelector('[data-option="coping"]')?.classList.contains('active') || false,
+            contains_affirmation: document.querySelector('[data-option="affirmation"]')?.classList.contains('active') || false,
+            trigger_warning: document.querySelector('.trigger-warning-input')?.value || null,
+            emotional_tone: document.querySelector('.selected-tone')?.dataset.tone || null,
+            is_anonymous: document.querySelector('[data-option="anonymous"]')?.classList.contains('active') || false
+        };
+        
+        // Send via WebSocket
+        if (window.chatSocket && window.chatSocket.readyState === WebSocket.OPEN) {
+            window.chatSocket.send(JSON.stringify({
+                'type': 'send_message',
+                'content': message,
+                'options': options,
+                'room_id': '{{ room.id|escapejs }}',
+                'user_id': '{{ user.id|escapejs }}'
+            }));
+            
+            // Clear input
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            document.getElementById('charCount').textContent = '0';
+            
+            // Clear options
+            clearMessageOptions();
+            
+            // Stop typing indicator
+            sendTypingIndicator(false);
+        }
+    }
+    
+    function initializeRoomChart() {
+        const ctx = document.getElementById('roomActivityChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Messages',
+                    data: {{ stats.activity_data|safe }},
+                    borderColor: 'rgb(52, 152, 219)',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 5
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+        
+        // Less than 1 minute
+        if (diff < 60000) {
+            return 'just now';
+        }
+        
+        // Less than 1 hour
+        if (diff < 3600000) {
+            const minutes = Math.floor(diff / 60000);
+            return `${minutes}m ago`;
+        }
+        // Less than 1 day
+        if (diff < 86400000) {
+            const hours = Math.floor(diff / 3600000);
+            return `${hours}h ago`;
+        }
+        
+        // Otherwise, show date
+        return date.toLocaleDateString();
+    }
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Initialize therapeutic features
+    function initializeTherapeuticFeatures() {
+        // Mood tracking
+        document.querySelectorAll('.mood-level').forEach(level => {
+            level.addEventListener('click', function() {
+                const moodLevel = this.dataset.level;
+                trackMood(moodLevel);
+            });
+        });
+    }
+    
+    function trackMood(level) {
+        fetch('/chat/api/track-mood/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                room_id: '{{ room.id|escapejs }}',
+                mood_level: level
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Mood tracked successfully', 'success');
+            }
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showToast(message, type) {
+        // Implement toast notification
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        setTimeout(() => toast.remove(), 5000);
+    }
+</script>
+{% endblock %}

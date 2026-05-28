@@ -9,8 +9,23 @@ https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 
 import os
 
-from django.core.asgi import get_asgi_application
+import os
+import django
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.auth import AuthMiddlewareStack
+from users.ws_middleware import JwtAuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'therapeutic_coding.settings')
+django.setup()
 
-application = get_asgi_application()
+from chat.routing import websocket_urlpatterns
+from django.core.asgi import get_asgi_application
+
+application = ProtocolTypeRouter({
+	'http': get_asgi_application(),
+	'websocket': JwtAuthMiddlewareStack(
+		URLRouter(
+			websocket_urlpatterns
+		)
+	),
+})

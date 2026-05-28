@@ -1,0 +1,30 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+{% if users.exists %}
+<table class="adminlist">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Profile</th>
+            <th>Locked Until</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for user in users %}
+        <tr>
+            <td><a href="{{ user.get_admin_url|default:'#' }}">{{ user.username }}</a></td>
+            <td>{{ user.email }}</td>
+            <td><a href="/admin/users/therapeuticuser/{{ user.id }}/change/">View</a></td>
+            <td>{{ user.account_locked_until }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No users currently online.</p>
+{% endif %}
+{% endblock %}

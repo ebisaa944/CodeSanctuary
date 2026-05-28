@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +23,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-t3&mx#pn050!0s3^9jl60@_zlz&x8968y=y6k1uuqy&-9lxu+#'
+# Load sensitive settings from environment when available. Defaults preserve
+# current development values so this change is non-breaking; override in
+# production via environment variables and refrain from committing secrets.
+_FILE_SECRET_KEY = 'django-insecure-t3&mx#pn050!0s3^9jl60@_zlz&x8968y=y6k1uuqy&-9lxu+#'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', _FILE_SECRET_KEY)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Preserve existing default but allow overriding with DJANGO_DEBUG
+_FILE_DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', str(_FILE_DEBUG)) == 'True'
 
-ALLOWED_HOSTS = []
+# Allow configuring allowed hosts via environment; in production set DJANGO_ALLOWED_HOSTS
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS')
+if ALLOWED_HOSTS:
+    ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS.split(',') if h.strip()]
+else:
+    ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -45,6 +58,8 @@ INSTALLED_APPS = [
     'corsheaders',                       # CORS for frontend
     'crispy_forms',
     'crispy_bootstrap5',
+    'channels',
+    'rest_framework_simplejwt.token_blacklist',
     
     # Your apps (without apps. prefix since we added apps to path)
     'users',
@@ -56,13 +71,16 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise (optional) to serve static files in simple deployments
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    # CORS should be high in the chain so it can add headers before responses are finalized
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     
 
 
@@ -99,6 +117,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'therapeutic_coding.wsgi.application'
+
+# ASGI app for Channels (will fall back to WSGI if Channels not used)
+ASGI_APPLICATION = os.getenv('DJANGO_ASGI_APPLICATION', 'therapeutic_coding.asgi.application')
 
 
 # Database
@@ -166,18 +187,20 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 
-# Add this line for production static file collection
+# Production-ready static configuration (collectstatic -> STATIC_ROOT). In
+# development these defaults preserve current behavior. Consider using a CDN
+# or S3-backed storage in production.
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# This should be defined ONCE - keep only this STATICFILES_DIRS
 STATICFILES_DIRS = [
     BASE_DIR / "static",
-    BASE_DIR / "therapy/static",
-    BASE_DIR / "users/static",
-    BASE_DIR / "learning/static",   
-    BASE_DIR / "social/static",
-    BASE_DIR / "chat/static",
 ]
+
+# Use WhiteNoise's compressed manifest storage in production to ensure
+# files are served efficiently and with long cache lifetimes.
+STATICFILES_STORAGE = os.getenv(
+    'DJANGO_STATICFILES_STORAGE',
+    'whitenoise.storage.CompressedManifestStaticFilesStorage'
+)
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -202,28 +225,114 @@ LOGOUT_REDIRECT_URL = 'home'
 
 # Add REST Framework configuration
 REST_FRAMEWORK = {
+    # Prefer JWT in production; keep SessionAuthentication as a fallback for
+    # browser-based interactions. Install djangorestframework-simplejwt and
+    # configure token lifetimes in env for production use.
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': int(os.getenv('DJANGO_PAGE_SIZE', '10')),
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
 }
 
+# DRF throttling (conservative defaults)
+REST_FRAMEWORK.setdefault('DEFAULT_THROTTLE_CLASSES', [
+    'rest_framework.throttling.AnonRateThrottle',
+    'rest_framework.throttling.UserRateThrottle',
+])
+REST_FRAMEWORK.setdefault('DEFAULT_THROTTLE_RATES', {
+    'anon': os.getenv('DRF_ANON_RATE', '10/min'),
+    'user': os.getenv('DRF_USER_RATE', '60/min'),
+    'presence': os.getenv('DRF_PRESENCE_RATE', '30/min'),
+})
+
 # Add these at the bottom
 AUTH_USER_MODEL = 'users.TherapeuticUser'  # CRITICAL
+
+# Simple JWT configuration (env-driven; install djangorestframework-simplejwt)
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.getenv('JWT_ACCESS_MINUTES', '60'))),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=int(os.getenv('JWT_REFRESH_DAYS', '7'))),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': os.getenv('JWT_ALGORITHM', 'HS256'),
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
 
 # CORS Settings (for frontend)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+
+# ----------------------
+# Redis / Cache Settings
+# ----------------------
+REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')
+REDIS_KEY_PREFIX = os.getenv('REDIS_KEY_PREFIX', 'cs:')
+
+# Configure Django cache to use Redis via django-redis
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            # Fail gracefully: ignore exceptions so site stays up if Redis is down
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'KEY_PREFIX': REDIS_KEY_PREFIX,
+    }
+}
+
+# Short default cache TTL for presence keys (seconds)
+PRESENCE_TTL = int(os.getenv('PRESENCE_TTL', '45'))
+
+# Channels (Redis channel layer)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [REDIS_URL],
+        }
+    }
+}
+
+# Health-check settings for Redis
+REDIS_HEALTHCHECK_TIMEOUT = int(os.getenv('REDIS_HEALTHCHECK_TIMEOUT', '2'))
+
+
+# Basic structured logging config - expand in production to ship to log aggregator
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '{asctime} {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+    },
+}
 
 # Login/Logout URLs.py
 LOGIN_URL = '/login/'  # Should be this, not '/users/login/'

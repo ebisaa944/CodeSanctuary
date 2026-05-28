@@ -238,41 +238,5 @@ if not os.path.exists(dashboard_template):
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5>Coping Strategies</h5>
-                                        <p>Tools for emotional regulation</p>
-                                        <a href="#" class="btn btn-primary">View Tools</a>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h5>Progress Tracking</h5>
-                                        <p>See your therapeutic journey</p>
-                                        <a href="#" class="btn btn-primary">View Progress</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
 ''')
-    print("   ✅ Created therapy dashboard template")
-
-print("\n" + "=" * 50)
-print("🎉 Setup complete!")
-print("\n📋 Next steps to run:")
-print("1. cd C:\\Users\\ebisaachame\\Desktop\\django_tutorial\\Code_Sanctuary")
-print("2. python manage.py makemigrations therapy")
-print("3. python manage.py migrate")
-print("4. python manage.py runserver")
-print("\n🌐 Then visit:")
-print("- http://127.0.0.1:8000/therapy/dashboard/")
-print("- http://127.0.0.1:8000/therapy/api/checkins/")
+    print("   ✅ Created therapy/templates/therapy/dashboard.html")

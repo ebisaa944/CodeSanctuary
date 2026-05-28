@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: therapeutic-web
+    env: docker
+    plan: starter
+    region: oregon
+    buildCommand: docker build -t therapeutic:latest .
+    startCommand: ./start-render.sh
+    healthCheckPath: /health/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: therapeutic_coding.settings.production
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: PORT
+        value: "8000"
+
+# Note: Postgres and Redis should be provisioned via the Render dashboard
+# and their connection URLs set as environment variables in the service:
+# DATABASE_URL and REDIS_URL. Do not commit secrets to this file.

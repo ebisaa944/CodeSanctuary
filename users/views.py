@@ -26,6 +26,99 @@ from django.contrib import messages
 from django.views.generic import TemplateView
 from django.utils import timezone
 from datetime import datetime, date
+from django.core.cache import cache
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework import throttling
+from rest_framework.permissions import IsAuthenticated
+from .api_serializers import OnlineUserSerializer
+import logging
+from django.conf import settings
+import time
+
+logger = logging.getLogger('therapeutic.users')
+
+# Token refresh hook to update presence when refresh occurs
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+class TokenRefreshWithPresenceView(TokenRefreshView):
+    """Extend token refresh to update presence for the user tied to the refresh token."""
+
+    def post(self, request, *args, **kwargs):
+        # Protect against replayed refresh tokens by using a Redis mark (setnx) keyed by refresh jti.
+        refresh = request.data.get('refresh')
+        from django_redis import get_redis_connection
+        from rest_framework_simplejwt.backends import TokenBackend
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+
+        if not refresh:
+            return Response({'detail': 'refresh token required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Decode without verifying to extract jti and exp
+        tb = TokenBackend(algorithm=getattr(settings, 'SIMPLE_JWT', {}).get('ALGORITHM', 'HS256'), signing_key=getattr(settings, 'SIMPLE_JWT', {}).get('SIGNING_KEY', settings.SECRET_KEY))
+        try:
+            payload = tb.decode(refresh, verify=False)
+        except Exception:
+            return Response({'detail': 'invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
+
+        jti = payload.get('jti')
+        exp = payload.get('exp')
+
+        # Mark as used atomically
+        conn = None
+        try:
+            conn = get_redis_connection('default')
+        except Exception:
+            conn = None
+
+        mark_key = f"{getattr(settings, 'REDIS_KEY_PREFIX', 'cs:')}refresh:used:{jti}"
+        marked = False
+        if conn:
+            try:
+                ttl = int(exp - time.time()) if exp else 3600
+                # set if not exists
+                marked = conn.set(mark_key, 1, nx=True, ex=ttl)
+            except Exception:
+                marked = False
+
+        if marked is False and conn is not None:
+            # Token reuse detected
+            logger.warning('Refresh token replay detected', extra={'jti': jti})
+            return Response({'detail': 'token replay detected'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Now verify token properly and proceed with regular refresh flow
+        try:
+            # Validate token
+            payload_verified = tb.decode(refresh, verify=True)
+        except Exception as exc:
+            # cleanup mark if verification fails
+            if conn:
+                try:
+                    conn.delete(mark_key)
+                except Exception:
+                    pass
+            logger.warning('Refresh token invalid/expired', extra={'error': str(exc)})
+            return Response({'detail': 'invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Delegate to parent to perform rotation and return new tokens
+        response = super().post(request, *args, **kwargs)
+
+        # On success, update presence
+        try:
+            token = RefreshToken(refresh)
+            user_id = token.payload.get('user_id') or token.get('user_id')
+            if user_id:
+                from .presence import get_presence_service
+                service = get_presence_service()
+                service.add(int(user_id))
+                logger.debug('Presence updated on token refresh', extra={'user_id': user_id})
+        except Exception:
+            logger.exception('Failed to update presence on token refresh')
+
+        return response
 
 # Try to import therapy models, but don't crash if they don't exist
 try:
@@ -477,55 +570,43 @@ def emotional_state_history(request):
     return render(request, 'users/emotional_state_history.html', context)
 
 @login_required
-def profile(request):
+def profile(request, username=None):
     """
     User profile page - using TherapeuticUser directly since there's no separate Profile model
     """
-    user = request.user  # This is TherapeuticUser
+    # Determine target user: if username provided, allow viewing that user's profile,
+    # but only allow editing by the authenticated owner.
+    if username:
+        try:
+            target_user = TherapeuticUser.objects.get(username=username)
+        except TherapeuticUser.DoesNotExist:
+            messages.error(request, 'User not found')
+            return redirect('landing_page')
+    else:
+        target_user = request.user
+
+    user = target_user
     
+    # Only allow edits by the authenticated owner (no IDOR)
     if request.method == "POST":
-        # Handle profile updates for TherapeuticUser fields
-        # Note: Your TherapeuticUser model doesn't have bio, location, birth_date, etc.
-        # So we'll only update the fields that exist
-        
-        # Update emotional profile if it exists in the form
-        if hasattr(user, 'emotional_profile'):
-            new_emotional_profile = request.POST.get('emotional_profile')
-            if new_emotional_profile:
-                user.emotional_profile = new_emotional_profile
-        
-        # Update learning style if it exists
-        if hasattr(user, 'learning_style'):
-            new_learning_style = request.POST.get('learning_style')
-            if new_learning_style:
-                user.learning_style = new_learning_style
-        
-        # Update daily time limit
-        if hasattr(user, 'daily_time_limit'):
-            new_daily_limit = request.POST.get('daily_time_limit')
-            if new_daily_limit:
-                try:
-                    user.daily_time_limit = int(new_daily_limit)
-                except ValueError:
-                    pass
-        
-        # Update gentle mode preference
-        if hasattr(user, 'gentle_mode'):
-            user.gentle_mode = request.POST.get('gentle_mode') == 'on'
-        
-        # Update custom affirmation
-        if hasattr(user, 'custom_affirmation'):
-            user.custom_affirmation = request.POST.get('custom_affirmation', '')
-        
-        # Update avatar color
-        if hasattr(user, 'avatar_color'):
-            new_color = request.POST.get('avatar_color')
-            if new_color:
-                user.avatar_color = new_color
-        
-        user.save()
-        messages.success(request, "Profile updated successfully!")
-        return redirect('users:profile')
+        if request.user != target_user and not request.user.is_staff:
+            messages.error(request, 'You do not have permission to edit this profile.')
+            return redirect('users:profile')
+
+        # Use serializer for validation and mass-assignment protection
+        from .serializers import UserUpdateSerializer
+        serializer = UserUpdateSerializer(target_user, data=request.POST, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            # Audit log
+            logger.info('User profile updated', extra={'user_id': request.user.id, 'target_user_id': target_user.id})
+            messages.success(request, "Profile updated successfully!")
+            return redirect('users:profile')
+        else:
+            for field, errors in serializer.errors.items():
+                for e in errors:
+                    messages.error(request, f"{field}: {e}")
+            # fall through to render with errors
     
     # Get available emotional profile choices
     emotional_profile_choices = []
@@ -547,6 +628,34 @@ def profile(request):
         'learning_style_choices': learning_style_choices,
     }
     return render(request, 'users/profile.html', context)
+
+
+class OnlineUsersAPIView(APIView):
+    """Return a cached list of currently online users for frontend use.
+
+    Authenticated users only (privacy). Throttled.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_scope = 'presence'
+
+    def get(self, request):
+        cache_key = f'users_online_list_v1'
+        result = cache.get(cache_key)
+        if result is not None:
+            return Response({'results': result}, status=status.HTTP_200_OK)
+
+        # Use PresenceService (Redis-backed) for online user ids
+        from .presence import get_presence_service
+        service = get_presence_service()
+        user_ids = service.get_online_ids()
+
+        users_qs = TherapeuticUser.objects.filter(id__in=user_ids).only('id', 'username', 'avatar_color', 'hide_progress')
+        serializer = OnlineUserSerializer(users_qs, many=True, context={'request': request})
+        result = serializer.data
+
+        # Cache short-lived; use Redis in production for shared caches
+        cache.set(cache_key, result, 30)
+        return Response({'results': result}, status=status.HTTP_200_OK)
 
 def about(request):
     """
@@ -586,6 +695,38 @@ def web_logout(request):
     """Web logout view for HTML templates"""
     logout(request)
     return redirect('landing_page')  # Changed from 'users:login'
+
+
+@require_POST
+def api_logout(request):
+    """API logout: blacklist provided refresh and optionally revoke access token and websocket sessions."""
+    from django.http import JsonResponse
+    from .token_utils import revoke_refresh_token, add_revoked_jti
+    from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+
+    refresh = request.POST.get('refresh') or request.META.get('HTTP_X_REFRESH_TOKEN')
+    access = request.POST.get('access') or request.META.get('HTTP_AUTHORIZATION')
+
+    if refresh:
+        try:
+            revoke_refresh_token(refresh)
+        except Exception:
+            logger.exception('Failed to revoke refresh')
+
+    # Handle access token: support 'Bearer <token>' format
+    if access:
+        token_str = access
+        if token_str.startswith('Bearer '):
+            token_str = token_str.split(' ', 1)[1]
+        try:
+            at = AccessToken(token_str)
+            jti = at.get('jti')
+            exp = at.get('exp')
+            add_revoked_jti(jti, exp)
+        except Exception:
+            logger.exception('Failed to revoke access token')
+
+    return JsonResponse({'detail': 'logged out'}, status=200)
 # users/views.py - Update the UserRegistrationView
 class UserRegistrationView(generics.CreateAPIView):
     """View for user registration with therapeutic defaults"""

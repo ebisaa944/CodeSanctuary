@@ -37,6 +37,15 @@ urlpatterns = [
 
     # Profile URLs
     path('', include(router.urls)),
+    path('profile/', views.profile, name='profile'),
+    path('profile/<str:username>/', views.profile, name='profile_view'),
+
+    # API: Online users (cached)
+    path('api/online-users/', views.OnlineUsersAPIView.as_view(), name='api_online_users'),
+
+    # JWT token refresh with presence update
+    path('api/token/refresh/', views.TokenRefreshWithPresenceView.as_view(), name='token_refresh'),
+    path('api/logout/', views.api_logout, name='api_logout'),
 
     # Settings URL
     path('settings/', UserSettingsView.as_view(), name='settings'),

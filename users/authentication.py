@@ -10,18 +10,18 @@ class TherapeuticAuthenticationBackend(ModelBackend):
         """Authenticate user with therapeutic checks"""
         UserModel = get_user_model()
         
-        # Rate limiting for therapeutic safety
+        # Rate limiting for therapeutic safety (non-blocking)
         if request:
             cache_key = f'auth_attempts_{request.META.get("REMOTE_ADDR")}'
             attempts = cache.get(cache_key, 0)
-            
+
             if attempts >= 5:  # Max 5 attempts per 15 minutes
-                # Log but don't block - gentle approach
+                # Log suspicious activity and deny authentication without blocking worker
                 self._log_suspicious_activity(request, 'rate_limit')
-                # Add delay for therapeutic pacing
-                time.sleep(2)
-            
-            cache.set(cache_key, attempts + 1, 900)  # 15 minutes
+                return None
+
+            # Increment attempt counter (15 minute window)
+            cache.set(cache_key, attempts + 1, 900)
         
         try:
             # Try username first (this handles username authentication)
@@ -90,6 +90,14 @@ class TherapeuticAuthenticationBackend(ModelBackend):
         }
         
         logger.info(f"Therapeutic auth success: {log_data}")
+
+        # Clear failed auth counter on success
+        try:
+            cache_key = f'failed_auth_{user.id}'
+            cache.delete(cache_key)
+        except Exception:
+            # Don't let cache issues interrupt auth flow
+            pass
     
     def _log_failed_auth(self, user, request):
         """Log failed authentication attempt"""

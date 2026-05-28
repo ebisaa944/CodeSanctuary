@@ -19,13 +19,8 @@ from django.urls import path, include
 # from rest_framework.routers import DefaultRouter
 from django.conf import settings
 from django.conf.urls.static import static
-from users.views import landing_page  # Import the landing page view
-
-
-
+from .health import health
 urlpatterns = [
-      # Root URL now goes to users landing page
-    path('', landing_page, name='landing_page'),
     
     # Admin
     path('admin/', admin.site.urls),
@@ -38,6 +33,7 @@ urlpatterns = [
     path('learning/', include('learning.urls')),
      path('social/', include('social.urls')),  # This line is crucial!
     path('chat/', include('chat.urls')),
+    path('health/', health),
 ]
 
 if settings.DEBUG:
